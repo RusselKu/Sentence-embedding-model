@@ -12,11 +12,28 @@ from transformers import PreTrainedTokenizer
 
 
 def load_snli_raw(file_path: str) -> List[Dict]:
-    """Load SNLI JSONL records from disk."""
+    """Load SNLI JSONL records from disk, resolving path in data/ or root if needed."""
+    candidate_paths = [
+        file_path,
+        os.path.join("data", os.path.basename(file_path)),
+        os.path.basename(file_path),
+        os.path.join("data", "snli_train_100k.jsonl"),
+        "snli_train_100k.jsonl",
+    ]
+    resolved_path = None
+    for p in candidate_paths:
+        if os.path.exists(p):
+            resolved_path = p
+            break
+
+    if resolved_path is None:
+        raise FileNotFoundError(
+            f"SNLI dataset file not found. Tried paths: {candidate_paths}. "
+            "Please ensure 'snli_train_100k.jsonl' is located in the root or 'data/' directory."
+        )
+
     records = []
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"SNLI file not found at: {file_path}")
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(resolved_path, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 records.append(json.loads(line))

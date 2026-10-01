@@ -31,10 +31,9 @@ exported_model/
 *.pth
 *.safetensors
 
-# Data files (keep git lightweight)
-data/*.jsonl
-data/*.csv
-data/*.tsv
+# Data files (allow required assignment dataset)
+!snli_train_100k.jsonl
+!data/snli_train_100k.jsonl
 !data/.gitkeep
 
 # IDE / System
