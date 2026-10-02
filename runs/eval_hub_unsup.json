@@ -1,0 +1,16 @@
+{
+  "model": "RusselKuAguilar/simcse-bert-uncased-unsup",
+  "model_type": "st_hub",
+  "pooling": "cls",
+  "device": "cuda",
+  "dev": {
+    "spearman": 76.32,
+    "alignment": 0.315,
+    "uniformity": -2.8887
+  },
+  "test": {
+    "spearman": 67.32,
+    "alignment": 0.3501,
+    "uniformity": -2.89
+  }
+}

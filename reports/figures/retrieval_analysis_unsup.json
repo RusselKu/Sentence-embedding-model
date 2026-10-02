@@ -1,0 +1,72 @@
+{
+  "model": "RusselKuAguilar/simcse-bert-uncased-unsup",
+  "sample_successes": [
+    {
+      "sentence1": "Georgian PM's ally to become president - exit poll",
+      "sentence2": "Ally of Georgia's billionaire PM to be president -exit polls",
+      "human_score": 4.6000000000000005,
+      "cosine_similarity": 0.838699996471405
+    },
+    {
+      "sentence1": "The research firm earlier had forecast an increase of 4.9 percent.",
+      "sentence2": "The firm had predicted earlier this year a 4.9 percent increase.",
+      "human_score": 4.8,
+      "cosine_similarity": 0.9226999878883362
+    },
+    {
+      "sentence1": "Group of people sitting around a restaurant dining table.",
+      "sentence2": "A group of people sitting at a restaurant table.",
+      "human_score": 4.8,
+      "cosine_similarity": 0.9230999946594238
+    },
+    {
+      "sentence1": "A yellow car speeds along a snowy field.",
+      "sentence2": "A yellow car drives quickly in the snow.",
+      "human_score": 4.4,
+      "cosine_similarity": 0.7545999884605408
+    },
+    {
+      "sentence1": "Neymar powers Brazil into last 16",
+      "sentence2": "Neymar powers Brazil into World Cup last 16",
+      "human_score": 4.4,
+      "cosine_similarity": 0.7669000029563904
+    }
+  ],
+  "sample_failures": [
+    {
+      "sentence1": "Gunmen kill nine people in northwest Pakistan",
+      "sentence2": "Gunmen kill 3 policemen in Iraq",
+      "human_score": 0.4,
+      "cosine_similarity": 0.8708999752998352,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    },
+    {
+      "sentence1": "It is impossible to answer this question without a form check.",
+      "sentence2": "This is a part answer to your question",
+      "human_score": 0.0,
+      "cosine_similarity": 0.7044000029563904,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    },
+    {
+      "sentence1": "Funeral of Ian Paisley to take place in Belfast",
+      "sentence2": "Funeral of MH17 victim Liam Sweeney takes place in Newcastle",
+      "human_score": 0.0,
+      "cosine_similarity": 0.6940000057220459,
+      "discrepancy_explanation": "Low lexical overlap with synonymous/paraphrased meaning"
+    },
+    {
+      "sentence1": "The answers so far are already good, but I'd like to add a map for Switzerland:",
+      "sentence2": "You have a lot of answers already, but I'd like to add Curries as another solutions.",
+      "human_score": 0.0,
+      "cosine_similarity": 0.6905999779701233,
+      "discrepancy_explanation": "Low lexical overlap with synonymous/paraphrased meaning"
+    },
+    {
+      "sentence1": "Hassan Rouhani wins Iran's presidential election",
+      "sentence2": "Maduro wins Venezuelan presidential vote",
+      "human_score": 0.2,
+      "cosine_similarity": 0.7664999961853027,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    }
+  ]
+}

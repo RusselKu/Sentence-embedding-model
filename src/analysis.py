@@ -24,6 +24,27 @@ from src.metrics import compute_cosine_similarity
 from src.models import SimCSEModel
 
 
+def encode_sentences(model_path_or_name: str, sentences: List[str], device: str = "cpu", pooling: str = "cls") -> np.ndarray:
+    """Encode list of sentences using local SimCSE checkpoint or Hugging Face Hub SentenceTransformer."""
+    ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
+    if os.path.exists(ckpt_file):
+        tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
+        model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
+        model.load_state_dict(torch.load(ckpt_file, map_location=device))
+        model.eval()
+        embs = []
+        for i in range(0, len(sentences), 64):
+            batch = sentences[i : i + 64]
+            inp = tokenizer(batch, padding=True, truncation=True, max_length=64, return_tensors="pt").to(device)
+            with torch.no_grad():
+                e = model.get_sentence_embeddings(inp["input_ids"], inp["attention_mask"], normalize=True)
+            embs.append(e.cpu().numpy())
+        return np.concatenate(embs, axis=0)
+    else:
+        st_model = SentenceTransformer(model_path_or_name, device=device)
+        return st_model.encode(sentences, batch_size=64, normalize_embeddings=True, show_progress_bar=False)
+
+
 def generate_similarity_distribution_plot(
     model_path_or_name: str,
     output_path: str = "reports/figures/similarity_distribution.png",
@@ -34,43 +55,12 @@ def generate_similarity_distribution_plot(
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     _, test_records = load_stsb_dataset()
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-    model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
-
-    ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
-    if os.path.exists(ckpt_file):
-        model.load_state_dict(torch.load(ckpt_file, map_location=device))
-    model.eval()
-
     sent1 = [r["sentence1"] for r in test_records]
     sent2 = [r["sentence2"] for r in test_records]
     human_scores = np.array([r["score"] for r in test_records], dtype=float)
 
-    def encode_batch(sentences):
-        embeddings = []
-        for i in range(0, len(sentences), 64):
-            batch = sentences[i:i + 64]
-            inputs = tokenizer(
-                batch,
-                padding=True,
-                truncation=True,
-                max_length=64,
-                return_tensors="pt",
-            ).to(device)
-
-            with torch.no_grad():
-                emb = model.get_sentence_embeddings(
-                    inputs["input_ids"],
-                    inputs["attention_mask"],
-                    normalize=True,
-                )
-
-            embeddings.append(emb.cpu().numpy())
-
-        return np.concatenate(embeddings, axis=0)
-
-    emb1 = encode_batch(sent1)
-    emb2 = encode_batch(sent2)
+    emb1 = encode_sentences(model_path_or_name, sent1, device=device, pooling=pooling)
+    emb2 = encode_sentences(model_path_or_name, sent2, device=device, pooling=pooling)
     similarities = compute_cosine_similarity(emb1, emb2)
 
     score_bins = [
@@ -238,30 +228,12 @@ def analyze_nearest_neighbors_and_failures(
     """Retrieve nearest neighbors for sample query sentences and identify failure cases on STS-B."""
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     _, test_records = load_stsb_dataset()
-
-    tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-    model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
-    ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
-    if os.path.exists(ckpt_file):
-        model.load_state_dict(torch.load(ckpt_file, map_location=device))
-    model.eval()
-
     sent1 = [r["sentence1"] for r in test_records]
     sent2 = [r["sentence2"] for r in test_records]
-    human_scores = np.array([r["score"] for r in test_records])
+    human_scores = np.array([r["score"] for r in test_records], dtype=float)
 
-    def encode(sents):
-        embs = []
-        for i in range(0, len(sents), 64):
-            batch = sents[i : i + 64]
-            inp = tokenizer(batch, padding=True, truncation=True, max_length=64, return_tensors="pt").to(device)
-            with torch.no_grad():
-                e = model.get_sentence_embeddings(inp["input_ids"], inp["attention_mask"], normalize=True)
-            embs.append(e.cpu().numpy())
-        return np.concatenate(embs, axis=0)
-
-    emb1 = encode(sent1)
-    emb2 = encode(sent2)
+    emb1 = encode_sentences(model_path_or_name, sent1, device=device, pooling=pooling)
+    emb2 = encode_sentences(model_path_or_name, sent2, device=device, pooling=pooling)
     sims = compute_cosine_similarity(emb1, emb2)
 
     # Calculate absolute error between normalized similarity (0..5) and human score
