@@ -1,0 +1,37 @@
+{
+  "run_name": "ablation_unsup_same_mask",
+  "timestamp": "20261002_ColabL4",
+  "mode": "unsup",
+  "model_name_or_path": "bert-base-uncased",
+  "pooling": "cls",
+  "hyperparameters": {
+    "lr": 3e-05,
+    "batch_size": 64,
+    "epochs": 1,
+    "temperature": 0.05,
+    "dropout_rate": null,
+    "weight_decay": 0.0,
+    "warmup_ratio": 0.05,
+    "seed": 42,
+    "same_dropout_mask_ablation": true,
+    "no_hard_negatives_ablation": false
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu_name": "NVIDIA L4",
+    "gpu_count": 1
+  },
+  "results": {
+    "dev": {
+      "spearman": 55.39,
+      "alignment": 0.8483,
+      "uniformity": -2.9816
+    },
+    "test": {
+      "spearman": 47.78,
+      "alignment": 0.7582,
+      "uniformity": -2.9761
+    }
+  },
+  "checkpoint_path": "checkpoints/ablation_unsup_same_mask/best_checkpoint"
+}

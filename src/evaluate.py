@@ -6,10 +6,15 @@ Supports raw BERT, SBERT-2019 baseline, trained SimCSE checkpoints, and HF Hub m
 import argparse
 import json
 import os
+import sys
 from typing import Dict, List, Optional
 import numpy as np
 import torch
 from tqdm import tqdm
+
+# Ensure repository root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from transformers import AutoTokenizer, AutoModel
 from sentence_transformers import SentenceTransformer
 

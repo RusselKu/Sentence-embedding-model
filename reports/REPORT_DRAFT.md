@@ -37,9 +37,9 @@
 
 | Run ID | Mode | Backbone | Batch Size | LR | Epochs | $\tau$ | Pooling | Dev Spearman | Test Spearman |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `unsup_simcse_default` | Unsup | `bert-base-uncased` | 64 | 3e-5 | 1 | 0.05 | CLS | *[Dev]* | *[Test]* |
+| `unsup_simcse_default` | Unsup | `bert-base-uncased` | 64 | 3e-5 | 1 | 0.05 | CLS | **76.32** | **67.32** |
 | `sup_simcse_default` | Sup (Hard Negs) | `bert-base-uncased` | 64 | 5e-5 | 3 | 0.05 | CLS | *[Dev]* | *[Test]* |
-| `ablation_unsup_same_mask` | Unsup (Ablation) | `bert-base-uncased` | 64 | 3e-5 | 1 | 0.05 | CLS | *[Dev]* | *[Test]* |
+| `ablation_unsup_same_mask` | Unsup (Ablation) | `bert-base-uncased` | 64 | 3e-5 | 1 | 0.05 | CLS | **55.39** | **47.78** |
 | `ablation_sup_no_hard_neg` | Sup (Ablation) | `bert-base-uncased` | 64 | 5e-5 | 3 | 0.05 | CLS | *[Dev]* | *[Test]* |
 
 ---
@@ -48,7 +48,8 @@
 
 ### Ablation 1 (Unsupervised): Independent Dropout vs. Same Dropout Mask
 - **Hypothesis:** Without independent dropout noise, both views are identical ($z_1 = z_2$). The contrastive loss loses its data augmentation and representation learning collapses towards trivial shortcuts.
-- **Delta Observed:** $\Delta \text{Dev} = \dots$, $\Delta \text{Test} = \dots$.
+- **Delta Observed:** $\Delta \text{Dev} = \mathbf{+20.93}$ points ($76.32 \to 55.39$), $\Delta \text{Test} = \mathbf{+19.54}$ points ($67.32 \to 47.78$).
+- **Theoretical Insight:** With `same_dropout_mask=True`, the test performance drops to $47.78$, which is virtually indistinguishable from untrained raw BERT ($47.29$). This empirically proves Gao et al.'s premise: standard dropout acts as minimal data augmentation; without representation perturbation between positive views, the InfoNCE numerator $\text{sim}(h_i, h_i^+)$ trivially equals $1.0$, preventing meaningful gradient flow.
 
 ### Ablation 2 (Supervised): Hard Negatives ON vs. OFF
 - **Hypothesis:** Contradiction pairs force the model to distinguish fine-grained semantic opposites that share substantial lexical overlap (e.g., "A dog running" vs. "A dog sleeping").
@@ -63,7 +64,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **Raw `bert-base-uncased` (mean pooling)** | 59.31 | 47.29 | 0.3678 / 0.3044 | -1.6348 / -1.6186 |
 | **SBERT-2019 (`bert-base-nli-mean-tokens`)** | 80.77 | 76.98 | 0.6996 / 0.5498 | -3.0557 / -3.0493 |
-| **Our Unsupervised SimCSE** | *[Our Dev]* | *[Our Test]* | *[Align]* | *[Uniform]* |
+| **Our Unsupervised SimCSE** | **76.32** | **67.32** | 0.6829 / 0.6090 | -2.8887 / -2.8900 |
 | **Our Supervised SimCSE** | *[Our Dev]* | *[Our Test]* | *[Align]* | *[Uniform]* |
 | **SimCSE Paper Unsupervised (Gao et al. 2021)** | 82.50 | 76.85 | - | - |
 | **SimCSE Paper Supervised (Gao et al. 2021)** | 84.92 | 81.57 | - | - |

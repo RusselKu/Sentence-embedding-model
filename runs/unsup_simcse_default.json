@@ -1,0 +1,37 @@
+{
+  "run_name": "unsup_simcse_default",
+  "timestamp": "20261002_ColabL4",
+  "mode": "unsup",
+  "model_name_or_path": "bert-base-uncased",
+  "pooling": "cls",
+  "hyperparameters": {
+    "lr": 3e-05,
+    "batch_size": 64,
+    "epochs": 1,
+    "temperature": 0.05,
+    "dropout_rate": null,
+    "weight_decay": 0.0,
+    "warmup_ratio": 0.05,
+    "seed": 42,
+    "same_dropout_mask_ablation": false,
+    "no_hard_negatives_ablation": false
+  },
+  "hardware": {
+    "device": "cuda",
+    "gpu_name": "NVIDIA L4",
+    "gpu_count": 1
+  },
+  "results": {
+    "dev": {
+      "spearman": 76.32,
+      "alignment": 0.6829,
+      "uniformity": -2.8887
+    },
+    "test": {
+      "spearman": 67.32,
+      "alignment": 0.609,
+      "uniformity": -2.89
+    }
+  },
+  "checkpoint_path": "checkpoints/unsup_simcse_default/best_checkpoint"
+}
