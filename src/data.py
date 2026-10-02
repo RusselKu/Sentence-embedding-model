@@ -329,6 +329,14 @@ class SupDataCollator:
 def load_stsb_dataset() -> Tuple[List[Dict], List[Dict]]:
     """Load STS-B development and test datasets.
 
+    The project uses the original STS-B human-score scale from 0 to 5.
+
+    Some Hugging Face versions of sentence-transformers/stsb expose
+    scores normalized to the interval [0, 1], while GLUE STS-B uses
+    the original [0, 5] scale.
+
+    This function standardizes both sources to the [0, 5] scale.
+
     Expected sizes:
         Dev:  1,500 sentence pairs
         Test: 1,379 sentence pairs
@@ -337,6 +345,29 @@ def load_stsb_dataset() -> Tuple[List[Dict], List[Dict]]:
         Tuple containing:
             (dev_records, test_records)
     """
+
+    def ensure_zero_to_five_scale(
+        records: List[Dict],
+    ) -> List[Dict]:
+        """Convert normalized STS-B scores from [0, 1] to [0, 5]."""
+
+        if not records:
+            return records
+
+        scores = [
+            record["score"]
+            for record in records
+        ]
+
+        min_score = min(scores)
+        max_score = max(scores)
+
+        if min_score >= 0.0 and max_score <= 1.0:
+            for record in records:
+                record["score"] = record["score"] * 5.0
+
+        return records
+
     try:
         dataset = load_dataset(
             "sentence-transformers/stsb"
@@ -360,10 +391,7 @@ def load_stsb_dataset() -> Tuple[List[Dict], List[Dict]]:
             for item in dataset["test"]
         ]
 
-        return dev_records, test_records
-
     except Exception:
-        # Fallback to the GLUE implementation of STS-B.
         dataset = load_dataset(
             "glue",
             "stsb",
@@ -387,4 +415,12 @@ def load_stsb_dataset() -> Tuple[List[Dict], List[Dict]]:
             for item in dataset["test"]
         ]
 
-        return dev_records, test_records
+    dev_records = ensure_zero_to_five_scale(
+        dev_records
+    )
+
+    test_records = ensure_zero_to_five_scale(
+        test_records
+    )
+
+    return dev_records, test_records

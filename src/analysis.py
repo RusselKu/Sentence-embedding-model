@@ -30,12 +30,13 @@ def generate_similarity_distribution_plot(
     device: str = "cpu",
     pooling: str = "cls",
 ):
-    """Plot cosine similarity distributions partitioned into STS-B human score intervals [0-1], [1-2], [2-3], [3-4], [4-5]."""
+    """Plot exact STS-B cosine-similarity histograms by human-score bracket."""
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     _, test_records = load_stsb_dataset()
 
     tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
     model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
+
     ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
     if os.path.exists(ckpt_file):
         model.load_state_dict(torch.load(ckpt_file, map_location=device))
@@ -43,48 +44,190 @@ def generate_similarity_distribution_plot(
 
     sent1 = [r["sentence1"] for r in test_records]
     sent2 = [r["sentence2"] for r in test_records]
-    scores = np.array([r["score"] for r in test_records])
+    human_scores = np.array([r["score"] for r in test_records], dtype=float)
 
     def encode_batch(sentences):
-        embs = []
+        embeddings = []
         for i in range(0, len(sentences), 64):
-            batch = sentences[i : i + 64]
-            inputs = tokenizer(batch, padding=True, truncation=True, max_length=64, return_tensors="pt").to(device)
+            batch = sentences[i:i + 64]
+            inputs = tokenizer(
+                batch,
+                padding=True,
+                truncation=True,
+                max_length=64,
+                return_tensors="pt",
+            ).to(device)
+
             with torch.no_grad():
-                emb = model.get_sentence_embeddings(inputs["input_ids"], inputs["attention_mask"], normalize=True)
-            embs.append(emb.cpu().numpy())
-        return np.concatenate(embs, axis=0)
+                emb = model.get_sentence_embeddings(
+                    inputs["input_ids"],
+                    inputs["attention_mask"],
+                    normalize=True,
+                )
+
+            embeddings.append(emb.cpu().numpy())
+
+        return np.concatenate(embeddings, axis=0)
 
     emb1 = encode_batch(sent1)
     emb2 = encode_batch(sent2)
-    sims = compute_cosine_similarity(emb1, emb2)
+    similarities = compute_cosine_similarity(emb1, emb2)
 
-    # Score bins
-    bins = [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 5.0)]
-    bin_labels = ["[0 - 1]", "[1 - 2]", "[2 - 3]", "[3 - 4]", "[4 - 5]"]
+    score_bins = [
+        (0.0, 1.0),
+        (1.0, 2.0),
+        (2.0, 3.0),
+        (3.0, 4.0),
+        (4.0, 5.0),
+    ]
 
-    plt.figure(figsize=(10, 6))
-    sns.set_theme(style="whitegrid")
+    score_labels = [
+        "Human score [0, 1)",
+        "Human score [1, 2)",
+        "Human score [2, 3)",
+        "Human score [3, 4)",
+        "Human score [4, 5]",
+    ]
 
-    for (low, high), label in zip(bins, bin_labels):
+    grouped = []
+    for low, high in score_bins:
         if high == 5.0:
-            mask = (scores >= low) & (scores <= high)
+            mask = (human_scores >= low) & (human_scores <= high)
         else:
-            mask = (scores >= low) & (scores < high)
-        subset_sims = sims[mask]
-        if len(subset_sims) > 0:
-            sns.kdeplot(subset_sims, label=f"Human Rating {label} (N={len(subset_sims)})", fill=True, alpha=0.25)
+            mask = (human_scores >= low) & (human_scores < high)
 
-    plt.title(f"Cosine Similarity Distribution by STS-B Human Rating\nModel: {os.path.basename(model_path_or_name)}", fontsize=14, fontweight="bold")
-    plt.xlabel("Cosine Similarity", fontsize=12)
-    plt.ylabel("Density", fontsize=12)
-    plt.xlim(-0.2, 1.05)
-    plt.legend(title="Score Brackets", loc="upper left")
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
+        grouped.append(similarities[mask])
+
+    # Fixed width of 0.05 for all five panels.
+    cosine_bins = np.arange(-1.0, 1.0001, 0.05)
+
+    minimum_similarity = float(np.min(similarities))
+    x_lower = np.floor(minimum_similarity / 0.05) * 0.05 - 0.05
+    x_lower = max(-1.0, x_lower)
+
+    # Common vertical scale so panel heights are directly comparable.
+    max_percentage = 0.0
+    for subset in grouped:
+        counts, _ = np.histogram(subset, bins=cosine_bins)
+        percentages = counts.astype(float) * 100.0 / len(subset)
+        max_percentage = max(max_percentage, float(np.max(percentages)))
+
+    common_y_max = np.ceil(max_percentage / 5.0) * 5.0 + 5.0
+
+    sns.set_theme(style="whitegrid", context="notebook")
+    palette = sns.color_palette("viridis", n_colors=5)
+
+    fig, axes = plt.subplots(
+        5,
+        1,
+        figsize=(12, 12),
+        sharex=True,
+        sharey=True,
+    )
+
+    model_name = os.path.basename(os.path.normpath(model_path_or_name))
+    if not model_name:
+        model_name = model_path_or_name
+
+    for ax, subset, label, color in zip(
+        axes,
+        grouped,
+        score_labels,
+        palette,
+    ):
+        weights = np.ones_like(subset, dtype=float) * 100.0 / len(subset)
+
+        ax.hist(
+            subset,
+            bins=cosine_bins,
+            weights=weights,
+            color=color,
+            alpha=0.78,
+            edgecolor="white",
+            linewidth=0.8,
+        )
+
+        mean_value = float(np.mean(subset))
+        median_value = float(np.median(subset))
+
+        ax.axvline(
+            mean_value,
+            color="black",
+            linestyle="--",
+            linewidth=1.5,
+            label=f"Mean = {mean_value:.3f}",
+        )
+
+        ax.axvline(
+            median_value,
+            color="black",
+            linestyle=":",
+            linewidth=1.5,
+            label=f"Median = {median_value:.3f}",
+        )
+
+        ax.text(
+            0.012,
+            0.88,
+            f"{label}   |   n = {len(subset)}",
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=11,
+            fontweight="bold",
+        )
+
+        ax.legend(loc="upper right", fontsize=9, ncol=2)
+        ax.set_ylabel("% of pairs", fontsize=10)
+        ax.set_ylim(0, common_y_max)
+        ax.grid(axis="y", linestyle="--", linewidth=0.7, alpha=0.35)
+        ax.grid(axis="x", linestyle=":", linewidth=0.5, alpha=0.25)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+    axes[-1].set_xlabel("Cosine similarity", fontsize=12)
+    axes[-1].set_xlim(x_lower, 1.0)
+
+    fig.suptitle(
+        "STS-B Cosine Similarity Distribution by Human Similarity Score",
+        fontsize=17,
+        fontweight="bold",
+        y=0.985,
+    )
+
+    fig.text(
+        0.5,
+        0.955,
+        (
+            f"Model: {model_name}   |   Pooling: {pooling}"
+            f"   |   Split: test   |   Pairs: {len(test_records):,}"
+            "   |   Bin width: 0.05"
+        ),
+        ha="center",
+        fontsize=10,
+    )
+
+    fig.text(
+        0.5,
+        0.012,
+        (
+            "Bars = observed relative frequencies | "
+            "Dashed line = mean | Dotted line = median | "
+            "All panels share the same y-axis scale."
+        ),
+        ha="center",
+        fontsize=9,
+        alpha=0.75,
+    )
+
+    fig.tight_layout(rect=[0.04, 0.04, 0.98, 0.94])
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
     print(f"Saved similarity distribution plot to: {output_path}")
-
+    print(f"Score groups plotted: {len(grouped)}/5")
+    print("Histogram bin width: 0.05")
+    print(f"Common y-axis maximum: {common_y_max:.1f}%")
 
 def analyze_nearest_neighbors_and_failures(
     model_path_or_name: str,
