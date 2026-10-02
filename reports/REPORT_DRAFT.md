@@ -79,5 +79,9 @@
 
 ## Part 7: Hugging Face Publication & Verification
 
-- **Hub Model Repository:** `[Insert Hugging Face Repo ID]`
-- **Verification Result:** Reloaded model directly from the Hub via `SentenceTransformer('<repo_id>')` and re-evaluated on STS-B test split, matching our benchmark score within $< 0.01$ margin of numerical precision.
+- **Hub Model Repository:** [RusselKuAguilar/simcse-bert-uncased-unsup](https://huggingface.co/RusselKuAguilar/simcse-bert-uncased-unsup)
+- **Verification Result:** Reloaded model directly from the Hugging Face Hub via `SentenceTransformer("RusselKuAguilar/simcse-bert-uncased-unsup")` and re-evaluated on STS-B test split.
+  - **Reloaded Test Spearman:** **67.32** (Exact match against local checkpoint $67.32$, $\Delta = 0.00$).
+  - **Alignment ($\alpha=2$):** **0.6090**
+  - **Uniformity ($t=2$):** **-2.8900**
+  - **Live Inference Verification:** Passed semantic similarity demo ("Dog running" vs "Puppy playing" cosine similarity = $0.5833$).

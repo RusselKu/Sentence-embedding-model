@@ -89,14 +89,13 @@
 
 ## 3. Mandatory Deliverables Checklist
 
-- [ ] **Code Repository:** Clean, structured codebase with pinned `requirements.txt`.
-- [ ] **Data Pipeline:** SNLI 100k parsed for both Unsupervised (unique sentences) and Supervised (entailment + hard negatives).
-- [ ] **Baselines Verified:** Raw BERT ($59.31 / 47.29$) and SBERT-2019 ($80.77 / 76.98$) sanity check passed.
-- [ ] **Trained Models:** Unsupervised SimCSE and Supervised SimCSE models trained with best checkpoints saved.
-- [ ] **Ablations Executed:**
-  - Unsupervised: Same dropout mask vs. independent dropout mask.
-  - Supervised: Hard negatives ON vs. OFF.
-- [ ] **Benchmark Table:** Dev & Test Spearman, Alignment, Uniformity for all models.
-- [ ] **Hugging Face Hub Model:** Best model uploaded to Hugging Face Hub, with rich Model Card, and verified by reloading and re-evaluating STS-B test split.
-- [ ] **Run Logs:** `runs/*.json` files containing config, seed, hardware info, and results.
-- [ ] **Final Report:** Complete PDF/Markdown covering Part 1–8, with team names included.
+- [x] **Code Repository:** Clean, structured codebase with pinned `requirements.txt`.
+- [x] **Data Pipeline:** SNLI 100k parsed for both Unsupervised (unique sentences) and Supervised (entailment + hard negatives).
+- [x] **Baselines Verified:** Raw BERT ($59.31 / 47.29$) and SBERT-2019 ($80.77 / 76.98$) sanity check passed.
+- [x] **Trained Models (Unsupervised Lead):** Unsupervised SimCSE trained (Dev: $76.32$, Test: $67.32$) with best checkpoints saved.
+- [ ] **Trained Models (Supervised Lead):** Supervised SimCSE model training (Joni).
+- [x] **Ablations Executed (Unsupervised):** Independent dropout mask vs. Same dropout mask ($\Delta = +19.54$ Test points).
+- [ ] **Ablations Executed (Supervised):** Hard negatives ON vs. OFF (Joni).
+- [x] **Hugging Face Hub Model:** Published [RusselKuAguilar/simcse-bert-uncased-unsup](https://huggingface.co/RusselKuAguilar/simcse-bert-uncased-unsup) with rich Model Card, verified by reloading and re-evaluating on STS-B Test ($67.32$, $\Delta = 0.00$).
+- [x] **Run Logs:** `runs/unsup_simcse_default.json` and `runs/ablation_unsup_same_mask.json` generated and tracked.
+- [ ] **Final Report:** Complete PDF/Markdown covering Part 1–8 with team names (Bianca/Team).
