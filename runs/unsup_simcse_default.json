@@ -17,10 +17,13 @@
     "no_hard_negatives_ablation": false
   },
   "hardware": {
+    "os": "Linux-x86_64 (Google Colab)",
+    "python_version": "3.10.12",
     "device": "cuda",
     "gpu_name": "NVIDIA L4",
     "gpu_count": 1
   },
+  "training_time_seconds": 835.2,
   "results": {
     "dev": {
       "spearman": 76.32,
