@@ -13,7 +13,11 @@ import torch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from transformers import AutoTokenizer, AutoModel
-from sentence_transformers import SentenceTransformer, models
+from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers.models import Transformer, Pooling
+except ImportError:
+    from sentence_transformers.sentence_transformer.modules import Transformer, Pooling
 from src.data import load_stsb_dataset
 from src.metrics import evaluate_sts_benchmark
 from src.models import SimCSEModel
@@ -142,8 +146,8 @@ def export_to_sentence_transformers(
     tokenizer.save_pretrained(transformer_subfolder)
 
     # Build SentenceTransformers modules
-    word_embedding_model = models.Transformer(transformer_subfolder, max_seq_length=64)
-    pooling_model = models.Pooling(
+    word_embedding_model = Transformer(transformer_subfolder, max_seq_length=64)
+    pooling_model = Pooling(
         word_embedding_model.get_word_embedding_dimension(),
         pooling_mode_cls_token=(pooling_mode == "cls"),
         pooling_mode_mean_tokens=(pooling_mode == "mean"),
