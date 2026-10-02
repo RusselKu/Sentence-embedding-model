@@ -7,6 +7,7 @@
 import argparse
 import json
 import os
+import sys
 from typing import Dict, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +15,9 @@ import seaborn as sns
 import torch
 from transformers import AutoTokenizer, AutoModel
 from sentence_transformers import SentenceTransformer
+
+# Ensure repository root is in python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.data import load_stsb_dataset
 from src.metrics import compute_cosine_similarity

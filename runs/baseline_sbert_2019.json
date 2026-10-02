@@ -1,0 +1,16 @@
+{
+  "model": "sentence-transformers/bert-base-nli-mean-tokens",
+  "model_type": "sbert",
+  "pooling": "mean",
+  "device": "cuda",
+  "dev": {
+    "spearman": 80.77,
+    "alignment": 0.6996,
+    "uniformity": -3.0557
+  },
+  "test": {
+    "spearman": 76.98,
+    "alignment": 0.5498,
+    "uniformity": -3.0493
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "model": "bert-base-uncased",
+  "sample_successes": [
+    {
+      "sentence1": "But Odette is the first to form over the Caribbean Sea in December, the Center said.",
+      "sentence2": "It is the first named storm to develop in the Caribbean in December.",
+      "human_score": 0.84,
+      "cosine_similarity": 0.613099992275238
+    },
+    {
+      "sentence1": "The lady peeled the potatoe.",
+      "sentence2": "A woman is peeling a potato.",
+      "human_score": 0.95,
+      "cosine_similarity": 0.6625000238418579
+    },
+    {
+      "sentence1": "The train sits at the train station.",
+      "sentence2": "A train parked at a train station.",
+      "human_score": 0.92,
+      "cosine_similarity": 0.6545000076293945
+    },
+    {
+      "sentence1": "I'm afraid we are out of luck in this one.",
+      "sentence2": "I think this is one of those things where you are just out of luck.",
+      "human_score": 1.0,
+      "cosine_similarity": 0.7035999894142151
+    },
+    {
+      "sentence1": "I had the same problem as you.",
+      "sentence2": "I have exactly the same problem.",
+      "human_score": 1.0,
+      "cosine_similarity": 0.7214999794960022
+    }
+  ],
+  "sample_failures": [
+    {
+      "sentence1": "A woman is cutting an onion.",
+      "sentence2": "A woman is cleaning a garden.",
+      "human_score": 0.05,
+      "cosine_similarity": 0.932699978351593,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    },
+    {
+      "sentence1": "A woman is dancing.",
+      "sentence2": "A woman is playing violin.",
+      "human_score": 0.08,
+      "cosine_similarity": 0.9426000118255615,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    },
+    {
+      "sentence1": "Gunmen kill nine people in northwest Pakistan",
+      "sentence2": "Gunmen kill 3 policemen in Iraq",
+      "human_score": 0.08,
+      "cosine_similarity": 0.9168999791145325,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    },
+    {
+      "sentence1": "A man is riding a motorcycle.",
+      "sentence2": "A woman is riding a horse.",
+      "human_score": 0.15,
+      "cosine_similarity": 0.9447000026702881,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    },
+    {
+      "sentence1": "A women painting a chair with a dining room in the background.",
+      "sentence2": "A man and boy walking along a beach with the sea in the background.",
+      "human_score": 0.0,
+      "cosine_similarity": 0.8833000063896179,
+      "discrepancy_explanation": "High lexical overlap with contradictory semantics"
+    }
+  ]
+}

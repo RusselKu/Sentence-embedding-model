@@ -59,10 +59,10 @@
 ## Part 6: Benchmark Table and The Gap Analysis
 
 ### Benchmark Comparison Table
-| Model | Dev Spearman ($\times 100$) | Test Spearman ($\times 100$) | Alignment ($\alpha=2$) | Uniformity ($t=2$) |
+| Model | Dev Spearman ($\times 100$) | Test Spearman ($\times 100$) | Dev / Test Alignment ($\alpha=2$) | Dev / Test Uniformity ($t=2$) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Raw `bert-base-uncased` (mean pooling)** | 59.31 *(Ref)* | 47.29 *(Ref)* | *[Align]* | *[Uniform]* |
-| **SBERT-2019 (`bert-base-nli-mean-tokens`)** | 80.77 *(Ref)* | 76.98 *(Ref)* | *[Align]* | *[Uniform]* |
+| **Raw `bert-base-uncased` (mean pooling)** | 59.31 | 47.29 | 0.3678 / 0.3044 | -1.6348 / -1.6186 |
+| **SBERT-2019 (`bert-base-nli-mean-tokens`)** | 80.77 | 76.98 | 0.6996 / 0.5498 | -3.0557 / -3.0493 |
 | **Our Unsupervised SimCSE** | *[Our Dev]* | *[Our Test]* | *[Align]* | *[Uniform]* |
 | **Our Supervised SimCSE** | *[Our Dev]* | *[Our Test]* | *[Align]* | *[Uniform]* |
 | **SimCSE Paper Unsupervised (Gao et al. 2021)** | 82.50 | 76.85 | - | - |

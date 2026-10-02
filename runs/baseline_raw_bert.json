@@ -1,0 +1,16 @@
+{
+  "model": "bert-base-uncased",
+  "model_type": "raw_bert",
+  "pooling": "mean",
+  "device": "cuda",
+  "dev": {
+    "spearman": 59.31,
+    "alignment": 0.3678,
+    "uniformity": -1.6348
+  },
+  "test": {
+    "spearman": 47.29,
+    "alignment": 0.3044,
+    "uniformity": -1.6186
+  }
+}
