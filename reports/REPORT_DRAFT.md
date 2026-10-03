@@ -1,4 +1,6 @@
-# U2T02: SimCSE Sentence Embedding Model Report
+# U2T02: SimCSE Sentence Embedding Model Report (working draft)
+
+> **Superseded by [FINAL_REPORT.md](FINAL_REPORT.md)**, which is the version to submit. Part 1 below is the final reviewed text; the alignment values here were corrected (STS-B score-scale bug, see `reports/QA_CHECKLIST.md`).
 
 **Team Members:**
 - Russel Ku (Russ)
@@ -9,27 +11,62 @@
 
 ---
 
-## Part 1: Understand the Objective
+## Part 1: Understand the Objective (final version, reviewed by Bianca)
 
-### 1. Contrastive Loss Components (Eq. 1 & Eq. 5)
-- **Numerator ($\exp(\text{sim}(h_i, h_i^+) / \tau)$):** Measures the exponentiated cosine similarity between the anchor sentence representation $h_i$ and its positive counterpart $h_i^+$ (produced via an independent dropout mask in unsupervised SimCSE, or an entailment hypothesis in supervised SimCSE), scaled by temperature $\tau$.
-- **Denominator ($\sum_{j=1}^N \exp(\text{sim}(h_i, h_j^+) / \tau)$):** Sums the exponentiated similarities between anchor $h_i$ and all $N$ representations in the mini-batch (including the 1 positive pair and $N-1$ in-batch negative pairs).
-- **Number of Negatives Pushed Away:**
-  - In **Unsupervised SimCSE** with mini-batch size $N = 64$: each anchor is pushed away from **$N - 1 = 63$ in-batch negatives**.
-  - In **Supervised SimCSE with Hard Negatives** (batch size $N = 64$ pairs): each anchor has $(N - 1) + K$ negatives, where $K$ is the number of real contradictions available in that batch. This equals 127 only when all 64 pairs have contradictions. In our subset, only 28.45% of pairs have one; missing contradictions are not replaced by positive hypotheses.
+### 1.1 Eq. 1 and Eq. 5: numerator, denominator and number of negatives
 
-### 2. Temperature Parameter ($\tau$)
-- **Function:** Temperature $\tau$ controls the "softness" vs. "hardness" of the probability distribution over negatives. Smaller $\tau$ sharpens the softmax, heavily penalizing negatives that are deceptively close in cosine distance (hard negatives).
-- **Paper Findings:** Gao et al. (2021) ablated $\tau \in [0.01, 0.5]$ and found that $\tau = 0.05$ yields optimal performance. A $\tau$ that is too large (e.g., $0.1 - 0.5$) smooths out gradients, failing to separate hard negatives; a $\tau$ that is too small ($< 0.01$) leads to unstable, saturated gradients.
+Unsupervised SimCSE (Gao et al., 2021, Eq. 1) minimizes, for each sentence $x_i$ in a mini-batch of $N$ sentences,
 
-### 3. SimCSE Contrastive Objective vs. Sentence-BERT (2019)
-- **SBERT (2019):** Trains with a 3-way classification loss over concatenated vector features $(u, v, |u - v|)$ passed through a linear classification layer to predict entailment, neutral, or contradiction.
-- **SimCSE (2021):** Employs an InfoNCE contrastive objective that directly maximizes the cosine similarity between normalized positive pairs and minimizes similarity against negatives on the unit hypersphere.
-- **Impact on STS-B:** SBERT's classification head allows the encoder to embed sentences in an anisotropic space (narrow cone), relying on the linear classifier to separate classes. In contrast, STS-B directly tests raw cosine similarity between embeddings without any classification head. SimCSE explicitly regularizes the representation space to be isotropic and uniform, yielding superior rank correlation on STS-B.
+$$\ell_i = -\log \frac{e^{\mathrm{sim}(h_i,\,h_i^{+})/\tau}}{\sum_{j=1}^{N} e^{\mathrm{sim}(h_i,\,h_j^{+})/\tau}}, \qquad \mathrm{sim}(a,b)=\frac{a^\top b}{\lVert a\rVert\,\lVert b\rVert}.$$
 
-### 4. Relation to Alignment and Uniformity (Wang & Isola, 2020)
-- **Alignment:** Asymptotically achieved by the numerator, minimizing the distance between positive representations $\mathbb{E}_{(x, x^+)}[\|f(x) - f(x^+)\|^2]$.
-- **Uniformity:** Asymptotically achieved by the denominator, pushing apart representations of all distinct instances to distribute embeddings uniformly across the unit sphere $\log \mathbb{E}_{x, y}[\exp(-2\|f(x) - f(y)\|^2)]$, avoiding representation collapse.
+- **Numerator:** the exponentiated, temperature-scaled cosine similarity between the anchor $h_i$ and its own positive $h_i^{+}$. In the unsupervised case, $h_i$ and $h_i^{+}$ are two encodings of the same sentence with **different dropout masks** $z, z'$. Dropout is the only data augmentation.
+- **Denominator:** a sum over all $N$ positives of the batch, $h_1^{+},\dots,h_N^{+}$. It includes the anchor's own positive ($j=i$) and the $N-1$ positives of the other sentences, which serve as **in-batch negatives**. The loss is the cross-entropy of a softmax classifier that must pick $h_i^{+}$ among $N$ candidates.
+- **Negatives per step with our batch size ($N=64$):** each anchor is pushed away from **$N-1 = 63$ negatives**. One optimization step has $64 \times 63 = 4{,}032$ anchor–negative pairs.
+
+The supervised version (Eq. 5) uses NLI triplets: the premise is the anchor, its entailment hypothesis is the positive $h_i^{+}$, and its contradiction hypothesis is a hard negative $h_i^{-}$:
+
+$$\ell_i = -\log \frac{e^{\mathrm{sim}(h_i,h_i^{+})/\tau}}{\sum_{j=1}^{N}\left(e^{\mathrm{sim}(h_i,h_j^{+})/\tau}+e^{\mathrm{sim}(h_i,h_j^{-})/\tau}\right)}.$$
+
+With full triplets the denominator has $2N$ terms, so each anchor has $(N-1)+N = 127$ negatives at $N=64$. In our SNLI subset only **9,488 of 33,351 pairs (28.45 %)** have a contradiction. We do not invent missing negatives and never substitute a positive for one. Each anchor therefore sees $63 + K$ negatives, where $K$ is the number of real contradictions in that batch. With uniform shuffling $K \sim \mathrm{Binomial}(64, 0.2845)$, so $\mathbb{E}[K] \approx 18.2$ (sd ≈ 3.6). That gives **≈ 81 negatives per anchor on average**, instead of the paper's 127.
+
+### 1.2 The temperature τ
+
+$\tau$ scales the cosine logits before the softmax. Cosine lies in $[-1,1]$, so the logits span a range of $2/\tau$: 40 at $\tau=0.05$, but only 2 at $\tau=1$. The gradient on negative $j$ is weighted by its softmax probability $p_{ij}\propto e^{\mathrm{sim}(h_i,h_j)/\tau}$:
+
+- **Small τ** sharpens the softmax. Almost all gradient goes to the hardest negatives (the most similar ones), so the loss acts like a hard-negative-mining loss. If τ is too small, training focuses on a few, possibly false, negatives and becomes noisy.
+- **Large τ** flattens the softmax. All negatives are pushed with similar weight, and the model cannot make the positive's probability approach 1 (at τ = 1 the largest possible logit ratio is $e^{2}\approx 7.4$), so the space is only weakly reshaped.
+
+**What the paper found** (Appendix D, Table D.1, supervised SimCSE-BERT$_\text{base}$, STS-B dev): τ = 0.001 → 84.9, 0.01 → 85.4, **0.05 → 86.2**, 0.1 → 82.0, 1 → 64.0. Dot product without normalization or temperature ("N/A") scored 85.9. Cosine similarity with a well-tuned **τ = 0.05** is best, and a large τ is catastrophic.
+
+**Our data agrees.** In the supervised sweep (dev, seed 42), τ = 0.05 was best at both learning rates: 81.45 / **81.67** / 80.49 for τ = 0.03 / 0.05 / 0.10 at lr 3e-5, and 81.04 / **81.23** / 80.27 at lr 5e-5. Going from 0.05 to 0.10 costs more (≈ 1.0–1.2 points) than going from 0.05 to 0.03 (≈ 0.2), the same asymmetry the paper reports.
+
+### 1.3 SimCSE vs. the Sentence-BERT (2019) objective, and why it matters for STS-B
+
+- **SBERT** (Reimers & Gurevych, 2019) mean-pools BERT into $u$ and $v$. On NLI it trains a **3-way softmax classifier** $o=\mathrm{softmax}(W_t[u;v;|u-v|])$ with cross-entropy over {entailment, neutral, contradiction}. Each training example is a single pair with a single label. The classifier $W_t$ is **thrown away** at inference, and sentences are then compared with cosine similarity.
+- **SimCSE** trains with InfoNCE directly on the **cosine similarity of the normalized embeddings**. Every step contrasts each anchor with all other sentences in the batch.
+
+**Why it matters for STS-B.** STS-B is evaluated with no regressor: embed, normalize, take the cosine, compute Spearman (Gao et al., Appendix B; we use the same protocol). The score therefore depends only on the geometry of the embedding space.
+
+1. SimCSE optimizes **exactly the test-time function** (cosine). SBERT optimizes a linear classifier on top of $[u;v;|u-v|]$, and nothing in its loss forces $\cos(u,v)$ to be monotonic in semantic similarity; good cosine behavior is only a by-product.
+2. A classification loss only needs the three classes to be linearly separable for each pair. It does not have to spread *unrelated* sentences across the sphere. SimCSE's in-batch negatives explicitly penalize every unrelated pair that sits too close, which is what reduces BERT's anisotropy (see 1.4).
+
+Our numbers reflect this. Our supervised SimCSE, trained on 33,351 SNLI pairs, reaches **79.02 test** vs. **76.98** for SBERT-2019, which was trained on all of SNLI + MultiNLI (~1M labeled pairs). Its uniformity is better on dev (−3.137 vs. −3.056) and equal within 0.003 on test (−3.046 vs. −3.049).
+
+### 1.4 Relation to alignment and uniformity (Wang & Isola, 2020)
+
+For L2-normalized encoders $f$:
+
+$$\ell_\text{align}=\mathbb{E}_{(x,x^+)\sim p_\text{pos}}\lVert f(x)-f(x^+)\rVert^2, \qquad \ell_\text{uniform}=\log\,\mathbb{E}_{x,y\sim p_\text{data}}\,e^{-2\lVert f(x)-f(y)\rVert^2}.$$
+
+Lower is better for both. **Alignment** measures how close positives are, and **uniformity** measures how evenly embeddings cover the hypersphere. As the number of negatives grows, the contrastive objective becomes (SimCSE Eq. 6):
+
+$$-\frac{1}{\tau}\,\mathbb{E}_{(x,x^+)}\!\left[f(x)^\top f(x^+)\right] + \mathbb{E}_{x}\!\left[\log \mathbb{E}_{x^-}\, e^{f(x)^\top f(x^-)/\tau}\right].$$
+
+- **First term (numerator) = alignment.** For unit vectors $\lVert f(x)-f(x^+)\rVert^2 = 2-2f(x)^\top f(x^+)$, so this term equals $\frac{1}{\tau}\left(\tfrac{1}{2}\ell_\text{align}-1\right)$. Minimizing the loss minimizes alignment exactly.
+- **Second term (denominator) ≈ uniformity.** With $t=\tfrac{1}{2\tau}$, $\ell_\text{uniform} = \log \mathbb{E}_{x,y} e^{f(x)^\top f(y)/\tau} - \tfrac{1}{\tau}$. By Jensen's inequality the second term is upper-bounded by $\ell_\text{uniform}+\tfrac{1}{\tau}$. Pushing negatives apart therefore drives the representation toward uniformity and prevents collapse.
+- **Anisotropy.** Gao et al. also show this term upper-bounds the sum of all entries of $WW^\top$ (the embedding similarity matrix). Minimizing it flattens the singular-value spectrum, which is a direct remedy for BERT's "narrow cone".
+
+**What we measured.** Raw BERT has uniformity −1.62 on test, and nearly all its pair cosines are above 0.5: the anisotropy problem. Every contrastive model reaches −2.89 to −3.14. Alignment alone is misleading: raw BERT has a *good-looking* alignment (0.22) only because everything is close to everything. The two metrics must be read together, as in the plot in Part 6.
 
 ---
 
@@ -66,9 +103,9 @@ The supervised learning rate and temperature were chosen from six runs using onl
 ### Benchmark Comparison Table
 | Model | Dev Spearman ($\times 100$) | Test Spearman ($\times 100$) | Dev / Test Alignment ($\alpha=2$) | Dev / Test Uniformity ($t=2$) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Raw `bert-base-uncased` (mean pooling)** | 59.31 | 47.29 | 0.3678 / 0.3044 | -1.6348 / -1.6186 |
-| **SBERT-2019 (`bert-base-nli-mean-tokens`)** | 80.77 | 76.98 | 0.6996 / 0.5498 | -3.0557 / -3.0493 |
-| **Our Unsupervised SimCSE** | **76.32** | **67.32** | 0.6829 / 0.6090 | -2.8887 / -2.8900 |
+| **Raw `bert-base-uncased` (mean pooling)** | 59.31 | 47.29 | 0.1948 / 0.2155 | -1.6348 / -1.6186 |
+| **SBERT-2019 (`bert-base-nli-mean-tokens`)** | 80.77 | 76.98 | 0.1929 / 0.1798 | -3.0557 / -3.0493 |
+| **Our Unsupervised SimCSE** | **76.32** | **67.32** | 0.3150 / 0.3501 | -2.8887 / -2.8900 |
 | **Our Supervised SimCSE** | **81.67** | **79.02** | 0.1857 / 0.1903 | -3.1374 / -3.0460 |
 | **SimCSE Paper Unsupervised (Gao et al. 2021)** | 82.50 | 76.85 | - | - |
 | **SimCSE Paper Supervised BERT-base (Gao et al. 2021)** | 86.20 | 84.25 | - | - |
@@ -91,6 +128,6 @@ Our supervised model exceeds the team's recorded SBERT-2019 test baseline by **2
 - **Hub Model Repository:** [RusselKuAguilar/simcse-bert-uncased-unsup](https://huggingface.co/RusselKuAguilar/simcse-bert-uncased-unsup)
 - **Verification Result:** Reloaded model directly from the Hugging Face Hub via `SentenceTransformer("RusselKuAguilar/simcse-bert-uncased-unsup")` and re-evaluated on STS-B test split.
   - **Reloaded Test Spearman:** **67.32** (Exact match against local checkpoint $67.32$, $\Delta = 0.00$).
-  - **Alignment ($\alpha=2$):** **0.6090**
+  - **Alignment ($\alpha=2$):** **0.3501** (pairs with score ≥ 4; the 0.6090 in the training log used the old all-pairs definition)
   - **Uniformity ($t=2$):** **-2.8900**
   - **Live Inference Verification:** Passed semantic similarity demo ("Dog running" vs "Puppy playing" cosine similarity = $0.5833$).

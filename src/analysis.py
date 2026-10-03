@@ -29,8 +29,12 @@ def encode_sentences(model_path_or_name: str, sentences: List[str], device: str 
     ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
     if os.path.exists(ckpt_file):
         tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-        model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
-        model.load_state_dict(torch.load(ckpt_file, map_location=device))
+        if os.path.exists(os.path.join(model_path_or_name, "simcse_config.json")):
+            # Same loading path as src/evaluate.py: keeps the supervised inference MLP.
+            model = SimCSEModel.from_checkpoint(model_path_or_name, device=device)
+        else:
+            model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
+            model.load_state_dict(torch.load(ckpt_file, map_location=device, weights_only=True))
         model.eval()
         embs = []
         for i in range(0, len(sentences), 64):

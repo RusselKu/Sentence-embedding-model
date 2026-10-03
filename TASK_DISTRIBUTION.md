@@ -98,4 +98,6 @@
 - [x] **Ablations Executed (Supervised):** Hard negatives ON vs. OFF: +0.66 Dev / +1.91 Test (seed 42); three paired seeds give mean dev delta +0.53, sample standard deviation 0.38.
 - [x] **Hugging Face Hub Model:** Published [RusselKuAguilar/simcse-bert-uncased-unsup](https://huggingface.co/RusselKuAguilar/simcse-bert-uncased-unsup) with rich Model Card, verified by reloading and re-evaluating on STS-B Test ($67.32$, $\Delta = 0.00$).
 - [x] **Run Logs:** Two existing unsupervised records plus 11 supervised runs integrated in `runs/run_history.json`; individual supervised logs are in `runs/jonav_*.json`. Test remains null for development-only trials.
-- [ ] **Final Report:** Complete PDF/Markdown covering Part 1–8 with team names (Bianca/Team).
+- [x] **Final Report:** [reports/FINAL_REPORT.md](reports/FINAL_REPORT.md) covers Parts 1–8 with full team names.
+- [x] **Model Card:** standardized template in `src/publish.py`; card for the published model in [reports/MODEL_CARD_unsup.md](reports/MODEL_CARD_unsup.md) (to upload as the Hub README).
+- [x] **CPU QA:** [reports/QA_CHECKLIST.md](reports/QA_CHECKLIST.md); 11 tests pass on CPU; alignment scale bug and supervised-MLP bug in `analysis.py` fixed.

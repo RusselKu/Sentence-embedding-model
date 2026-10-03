@@ -1,0 +1,177 @@
+{
+  "model": "RusselKuAguilar/simcse-bert-uncased-unsup",
+  "corpus_size": 2552,
+  "high_score_pairs": 338,
+  "recall_at_1": 0.7663,
+  "recall_at_5": 0.9467,
+  "median_partner_rank": 1,
+  "queries": [
+    {
+      "query": "A man is playing a guitar.",
+      "neighbors": [
+        {
+          "rank": 1,
+          "sentence": "A man is playing guitar.",
+          "cosine": 0.978
+        },
+        {
+          "rank": 2,
+          "sentence": "A man is playing the guitar.",
+          "cosine": 0.9614
+        },
+        {
+          "rank": 3,
+          "sentence": "A man is playing his guitar.",
+          "cosine": 0.9486
+        },
+        {
+          "rank": 4,
+          "sentence": "A man is playing an acoustic guitar.",
+          "cosine": 0.9074
+        },
+        {
+          "rank": 5,
+          "sentence": "A man plays a guitar.",
+          "cosine": 0.9045
+        }
+      ]
+    },
+    {
+      "query": "A woman is slicing an onion.",
+      "neighbors": [
+        {
+          "rank": 1,
+          "sentence": "A woman is cutting an onion.",
+          "cosine": 0.9662
+        },
+        {
+          "rank": 2,
+          "sentence": "A woman is cutting onion.",
+          "cosine": 0.9456
+        },
+        {
+          "rank": 3,
+          "sentence": "A man is slicing an onion.",
+          "cosine": 0.9228
+        },
+        {
+          "rank": 4,
+          "sentence": "A person is slicing an onion.",
+          "cosine": 0.9052
+        },
+        {
+          "rank": 5,
+          "sentence": "A man is cutting an onion.",
+          "cosine": 0.8855
+        }
+      ]
+    },
+    {
+      "query": "Gunmen kill nine people in northwest Pakistan",
+      "neighbors": [
+        {
+          "rank": 1,
+          "sentence": "Gunmen kill nine in southwest Pakistan: Police",
+          "cosine": 0.9271
+        },
+        {
+          "rank": 2,
+          "sentence": "Gunmen kill 3 policemen in Iraq",
+          "cosine": 0.8709
+        },
+        {
+          "rank": 3,
+          "sentence": "Suicide bomber kills 21 in NW Pakistan",
+          "cosine": 0.8477
+        },
+        {
+          "rank": 4,
+          "sentence": "Gunmen kill 5 female teachers in Pakistan",
+          "cosine": 0.824
+        },
+        {
+          "rank": 5,
+          "sentence": "Suicide attacks kill 24 people in Baghdad",
+          "cosine": 0.8226
+        }
+      ]
+    },
+    {
+      "query": "The stock market fell sharply on Monday.",
+      "neighbors": [
+        {
+          "rank": 1,
+          "sentence": "In other markets, U.S. Treasuries started off on Monday weaker, as stocks rose early.",
+          "cosine": 0.7235
+        },
+        {
+          "rank": 2,
+          "sentence": "Shares of McDonald's and Wendy's continued their recent recovery Monday, rising more than 1 percent on the New York Stock Exchange in afternoon trade.",
+          "cosine": 0.7161
+        },
+        {
+          "rank": 3,
+          "sentence": "Shares of McDonald's Corp. and Wendy's International Inc. continued a modest run-up on the New York Stock Exchange Monday.",
+          "cosine": 0.7034
+        },
+        {
+          "rank": 4,
+          "sentence": "The dollar fell as low as $1.1624 per euro from $1.1486 on Friday, and traded at $1.1594 at 10:15 a.m. in London.",
+          "cosine": 0.7025
+        },
+        {
+          "rank": 5,
+          "sentence": "The Swedish central bank was also meeting on Wednesday and widely expected to announce a cut on Thursday.",
+          "cosine": 0.6946
+        }
+      ]
+    }
+  ],
+  "worst_failures": [
+    {
+      "sentence1": "There are two things to consider:",
+      "sentence2": "There are two possible causes for this:",
+      "human_score": 4.0,
+      "partner_rank": 87,
+      "partner_cosine": 0.4749,
+      "retrieved_top1": "I think there are two important things to consider:",
+      "top1_cosine": 0.9077
+    },
+    {
+      "sentence1": "A woman is slicing some tofu.",
+      "sentence2": "A woman is cutting a block of tofu into small cubes.",
+      "human_score": 4.0,
+      "partner_rank": 30,
+      "partner_cosine": 0.6636,
+      "retrieved_top1": "A woman is cutting tofu.",
+      "top1_cosine": 0.9077
+    },
+    {
+      "sentence1": "A brown dog is running through the field.",
+      "sentence2": "a brown dog with his tongue wagging as he runs through a field",
+      "human_score": 4.0,
+      "partner_rank": 16,
+      "partner_cosine": 0.6241,
+      "retrieved_top1": "A brown and white dog is running across a brown field.",
+      "top1_cosine": 0.7841
+    },
+    {
+      "sentence1": "It's not a good idea.",
+      "sentence2": "No, it's not a good thing.",
+      "human_score": 4.0,
+      "partner_rank": 13,
+      "partner_cosine": 0.7391,
+      "retrieved_top1": "It is not a good idea.",
+      "top1_cosine": 0.9307
+    },
+    {
+      "sentence1": "There are a few things I think you should do.",
+      "sentence2": "There are a few minimally-effective things you can do at the personal level.",
+      "human_score": 4.0,
+      "partner_rank": 13,
+      "partner_cosine": 0.6567,
+      "retrieved_top1": "There are a few things you need to consider:",
+      "top1_cosine": 0.8212
+    }
+  ]
+}

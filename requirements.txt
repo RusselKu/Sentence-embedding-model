@@ -1,12 +1,19 @@
-torch>=2.0.0
-transformers>=4.36.0
-sentence-transformers>=2.2.2
-datasets>=2.16.0
-scipy>=1.11.0
-numpy>=1.24.0
-tqdm>=4.66.0
-matplotlib>=3.8.0
-seaborn>=0.13.0
-pandas>=2.1.0
-huggingface_hub>=0.20.0
-accelerate>=0.25.0
+# Pinned versions verified on CPU (Windows, Python 3.11) by Bianca: these load the published Hub model,
+# which was saved with sentence-transformers 6.1.0 (older 3.x cannot load it).
+# Jonav's supervised Colab environment is recorded separately in reports/jonav/requirements-runtime.txt.
+# torch: install the wheel for your platform (CPU or CUDA) at this version.
+torch==2.11.0
+transformers==5.18.0
+tokenizers==0.23.2
+sentence-transformers==6.1.0
+datasets==4.3.0
+scipy==1.15.3
+numpy==2.2.6
+scikit-learn==1.6.1
+tqdm==4.67.1
+matplotlib==3.10.1
+seaborn==0.13.2
+pandas==2.2.3
+huggingface_hub==1.33.0
+accelerate==1.10.1
+pytest==8.4.2

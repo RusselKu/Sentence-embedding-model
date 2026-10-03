@@ -23,22 +23,78 @@ from src.metrics import evaluate_sts_benchmark
 from src.models import SimCSEModel
 
 
-def generate_model_card(
-    repo_id: str,
-    base_model: str,
-    mode: str,
-    dev_spearman: float,
-    test_spearman: float,
-    alignment: float,
-    uniformity: float,
-    hyperparameters: dict,
-) -> str:
-    """Generate Hugging Face Model Card README.md."""
-    card = f"""---
+TEAM = ("Acosta Castellanos Bianca Alexandra, Canche Chuc Angel Rivaldo, Ku Aguilar Russel, "
+        "Sanchez Novelo Damian, Velasco Martin Jonathan Abisai")
+
+PAPER_STSB = {"unsup": (82.5, 76.85), "sup": (86.2, 84.25)}  # Gao et al. 2021, Tables 3/4/5
+
+
+def _fmt(value, spec):
+    return "-" if value is None else format(value, spec)
+
+
+def generate_model_card(repo_id: str, run_meta: dict, verified_test_spearman=None) -> str:
+    """Model card (README.md for the Hub) built from a run JSON in runs/.
+
+    Covers what the assignment asks for: training data, recipe, metrics, limitations.
+    Standardized template (Bianca): every number comes from the run JSON, nothing typed by hand.
+    """
+    mode = "sup" if str(run_meta.get("mode", "sup")).startswith("sup") else "unsup"
+    hp = run_meta.get("hyperparameters", {})
+    hw = run_meta.get("hardware", {})
+    base = run_meta.get("model_name_or_path", "bert-base-uncased")
+    pooling = run_meta.get("pooling", "cls")
+    res = run_meta.get("results", {})
+    dev = res.get("dev") or {}
+    test = res.get("test") or {}
+    paper_dev, paper_test = PAPER_STSB[mode]
+    hard_neg = mode == "sup" and not hp.get("no_hard_negatives_ablation", False)
+
+    if mode == "unsup":
+        data_desc = ("165,528 unique sentences (premises and hypotheses, whitespace-stripped) from "
+                     "`snli_train_100k.jsonl`, a 100k-record subset of the SNLI train split. Labels are "
+                     "not used: each sentence is its own positive, the two views differ only by dropout.")
+        objective = ("Unsupervised SimCSE (Gao et al., 2021, Eq. 1): InfoNCE over a batch of N sentences, "
+                     "positive = the same sentence encoded with an independent dropout mask, "
+                     f"negatives = the other N-1 = {hp.get('batch_size', 64) - 1} sentences of the batch.")
+        inference = ("[CLS] token of the last layer. The MLP head was used only during training and is "
+                     "discarded at inference, as in the paper.")
+    else:
+        data_desc = ("33,351 (premise, entailment hypothesis) pairs from `snli_train_100k.jsonl` (100k-record "
+                     "subset of SNLI train). 9,488 of them (28.45%) also have a contradiction hypothesis, "
+                     "used as hard negative" + ("." if hard_neg else " (disabled in this run)."))
+        objective = ("Supervised SimCSE (Gao et al., 2021, Eq. 5): InfoNCE with entailment hypotheses as positives, "
+                     f"the other {hp.get('batch_size', 64) - 1} in-batch positives as negatives"
+                     + (" plus the K contradiction hypotheses available in the batch as hard negatives (63 + K)."
+                        if hard_neg else "."))
+        inference = ("[CLS] token followed by the trained MLP (Linear 768->768 + tanh), kept at inference "
+                     "as in the official SimCSE evaluation for supervised models.")
+
+    verify = ("" if verified_test_spearman is None else
+              f"\nVerified after upload: reloaded from the Hub and re-evaluated on STS-B test = "
+              f"**{verified_test_spearman:.2f}** (table value {_fmt(test.get('spearman'), '.2f')}).\n")
+
+    hp_rows = "\n".join(f"| {k} | {v} |" for k, v in [
+        ("Base model", f"`{base}`"), ("Pooling", pooling.upper()),
+        ("Learning rate", hp.get("lr")), ("Batch size", hp.get("batch_size")),
+        ("Epochs", hp.get("epochs")), ("Temperature (tau)", hp.get("temperature")),
+        ("Max sequence length", hp.get("max_length", 64)),
+        ("Dropout", hp.get("dropout_rate") or "0.1 (bert-base-uncased default)"),
+        ("Warmup ratio / weight decay", f"{hp.get('warmup_ratio')} / {hp.get('weight_decay')}"),
+        ("Seed", hp.get("seed")),
+        ("Checkpoint selection", "best STS-B dev Spearman, evaluated every 250 steps and at epoch end"),
+        ("Hardware", f"{hw.get('gpu_name', hw.get('device', '?'))}, {run_meta.get('training_time_seconds', '?')} s"),
+    ])
+
+    return f"""---
 language:
 - en
 license: apache-2.0
 library_name: sentence-transformers
+base_model: {base}
+datasets:
+- stanfordnlp/snli
+- sentence-transformers/stsb
 tags:
 - sentence-transformers
 - sentence-similarity
@@ -46,81 +102,101 @@ tags:
 - simcse
 - contrastive-learning
 pipeline_tag: sentence-similarity
-metrics:
-- spearman_cosine
+model-index:
+- name: {repo_id.split('/')[-1]}
+  results:
+  - task:
+      type: semantic-similarity
+    dataset:
+      name: STS-Benchmark
+      type: sentence-transformers/stsb
+      split: test
+    metrics:
+    - type: spearman_cosine
+      value: {_fmt(test.get('spearman'), '.2f')}
 ---
 
 # {repo_id}
 
-This is a **SimCSE ({mode.capitalize()})** sentence embedding model trained on a 100k subset of SNLI from `{base_model}`. It maps sentences into a dense 768-dimensional vector space for semantic similarity, clustering, and retrieval tasks.
+{'Supervised' if mode == 'sup' else 'Unsupervised'} **SimCSE** sentence encoder trained from `{base}` on a
+100k-record subset of SNLI, as a course replication of Gao, Yao & Chen (EMNLP 2021). It maps an English
+sentence to a 768-dimensional vector; compare sentences with cosine similarity.
 
-## Model Details
-- **Architecture**: `{base_model}` with {mode} contrastive learning objective (InfoNCE).
-- **Pooling**: CLS / Mean pooling on token embeddings.
-- **Training Dataset**: SNLI (100k subset, `snli_train_100k.jsonl`).
-- **Evaluation Dataset**: STS-Benchmark (STS-B).
+Team (Universidad Politécnica de Yucatán, U2T02): {TEAM}.
 
-## Evaluation Results (STS-B)
-| Metric | Dev Split | Test Split |
-| :--- | :--- | :--- |
-| **Spearman Correlation ($\times 100$)** | **{dev_spearman:.2f}** | **{test_spearman:.2f}** |
-| **Alignment ($\alpha=2$)** | - | {alignment:.4f} |
-| **Uniformity ($t=2$)** | - | {uniformity:.4f} |
+## Training data
+{data_desc}
 
-## Training Recipe & Hyperparameters
-```json
-{json.dumps(hyperparameters, indent=2)}
-```
+The paper trained on much more data (1M Wikipedia sentences for unsupervised; ~314k SNLI+MNLI pairs for
+supervised). This model is therefore **not** expected to reach the paper's numbers; see Limitations.
 
-## Usage (Sentence-Transformers)
+## Training recipe
+{objective}
+
+| Setting | Value |
+|---|---|
+{hp_rows}
+
+**Inference representation:** {inference}
+
+## Evaluation (STS-B, Spearman x100)
+Protocol: encode both sentences, L2-normalize, cosine similarity, Spearman against the human scores;
+no regressor ("all" aggregation, Gao et al. Appendix B). Test was evaluated once, after selecting the
+checkpoint on dev. Alignment uses STS-B pairs with score >= 4; uniformity uses all sentences
+(Wang & Isola, 2020; lower is better for both).
+
+| Split | Spearman | Alignment (a=2) | Uniformity (t=2) | Paper (Gao et al.) |
+|---|---:|---:|---:|---:|
+| Dev | {_fmt(dev.get('spearman'), '.2f')} | {_fmt(dev.get('alignment'), '.4f')} | {_fmt(dev.get('uniformity'), '.4f')} | {paper_dev} |
+| Test | {_fmt(test.get('spearman'), '.2f')} | {_fmt(test.get('alignment'), '.4f')} | {_fmt(test.get('uniformity'), '.4f')} | {paper_test} |
+
+Reference baselines with the same evaluation code: raw `bert-base-uncased` (mean pooling) 59.31 / 47.29;
+SBERT-2019 (`bert-base-nli-mean-tokens`) 80.77 / 76.98 (dev / test).
+{verify}
+## Usage
 
 ```python
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
-# Load model from Hugging Face Hub
 model = SentenceTransformer("{repo_id}")
-
 sentences = [
-    "A man is playing a guitar in the room.",
-    "A musician is playing music indoors.",
-    "A dog is chasing a ball in the park."
+    "A man is playing a guitar.",
+    "Someone is playing an instrument.",
+    "A dog is chasing a ball in the park.",
 ]
-
-embeddings = model.encode(sentences, normalize_embeddings=True)
-sims = cosine_similarity(embeddings)
-print("Similarity matrix:", sims)
+emb = model.encode(sentences, normalize_embeddings=True)
+print(emb @ emb.T)  # cosine similarity matrix
 ```
 
-## Usage (HuggingFace Transformers)
+Use `sentence-transformers` (not a raw `AutoModel` with your own pooling): the pooling
+{'and the MLP head are' if mode == 'sup' else 'is'} stored in the model's module configuration, and
+using a different pooling silently changes the embeddings.
 
-```python
-import torch
-import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModel
+## Limitations
+- **Small, narrow training corpus.** Only SNLI sentences: short, simple descriptions of photographs
+  (SNLI premises are Flickr30k captions). Quality drops on other genres; on STS-B the test score is clearly
+  below dev ({_fmt(dev.get('spearman'), '.2f')} vs {_fmt(test.get('spearman'), '.2f')}).
+- **Topical similarity is over-rated.** Sentences that share a template and a topic but differ in the key
+  entity or event (e.g. two different attacks in two different countries) get high cosine similarity even
+  when humans rate them as unrelated.
+{'- **Partial hard negatives.** Only 28.45% of the training pairs have a contradiction hard negative.' + chr(10) if mode == 'sup' else ''}- **English only, max 64 tokens**; longer inputs are truncated. Not evaluated on retrieval benchmarks,
+  other languages, or specialised domains (legal, biomedical, code).
+- **Biases.** Inherits the social biases of BERT pre-training data and of SNLI, whose hypotheses were
+  written by crowd workers and contain known annotation artifacts and stereotypes.
+- **Single seed.** Reported from one training seed; run-to-run variation is roughly +-0.5 Spearman on dev
+  in our supervised seed study, so differences under ~1 point should not be over-interpreted.
+- Intended for teaching and research, not for decisions about people.
 
-tokenizer = AutoTokenizer.from_pretrained("{repo_id}")
-model = AutoModel.from_pretrained("{repo_id}")
-
-sentences = ["Antigravity AI is writing code.", "AI agents are generating software."]
-inputs = tokenizer(sentences, padding=True, truncation=True, return_tensors="pt")
-
-with torch.no_grad():
-    outputs = model(**inputs)
-    # Mean pooling
-    mask = inputs["attention_mask"].unsqueeze(-1).expand(outputs.last_hidden_state.size()).float()
-    embeddings = torch.sum(outputs.last_hidden_state * mask, 1) / torch.clamp(mask.sum(1), min=1e-9)
-    embeddings = F.normalize(embeddings, p=2, dim=1)
-
-cos_sim = F.cosine_similarity(embeddings[0].unsqueeze(0), embeddings[1].unsqueeze(0))
-print("Cosine similarity:", cos_sim.item())
+## Citation
+```bibtex
+@inproceedings{{gao2021simcse,
+  title={{SimCSE: Simple Contrastive Learning of Sentence Embeddings}},
+  author={{Gao, Tianyu and Yao, Xingcheng and Chen, Danqi}},
+  booktitle={{EMNLP}},
+  year={{2021}}
+}}
 ```
-
-## Limitations & Biases
-- Trained exclusively on English data.
-- Evaluated primarily on sentence similarity (STS-B); may require domain adaptation for specialized retrieval (e.g. legal, biomedical).
 """
-    return card
 
 
 def export_to_sentence_transformers(
@@ -176,23 +252,10 @@ def publish_and_verify(
         with open(run_json_path, "r", encoding="utf-8") as f:
             run_meta = json.load(f)
 
-    mode = run_meta.get("mode", "supervised")
-    base_model = run_meta.get("model_name_or_path", "bert-base-uncased")
-    dev_res = run_meta.get("results", {}).get("dev", {"spearman": 0.0, "alignment": 0.0, "uniformity": 0.0})
-    test_res = run_meta.get("results", {}).get("test", {"spearman": 0.0, "alignment": 0.0, "uniformity": 0.0})
-    hyperparams = run_meta.get("hyperparameters", {})
+    test_res = (run_meta.get("results", {}) or {}).get("test") or {}
 
-    # Generate Model Card
-    readme_content = generate_model_card(
-        repo_id=repo_id,
-        base_model=base_model,
-        mode=mode,
-        dev_spearman=dev_res.get("spearman", 0.0),
-        test_spearman=test_res.get("spearman", 0.0),
-        alignment=test_res.get("alignment", 0.0),
-        uniformity=test_res.get("uniformity", 0.0),
-        hyperparameters=hyperparams,
-    )
+    # Generate Model Card (standardized template; all numbers come from the run JSON)
+    readme_content = generate_model_card(repo_id=repo_id, run_meta=run_meta)
 
     with open(os.path.join(export_dir, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme_content)
