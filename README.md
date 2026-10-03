@@ -98,6 +98,10 @@ python scripts/train_unsupervised.py \
 ### Step 3: Train Supervised SimCSE (with Hard Negatives)
 Uses `(premise, entailment, contradiction)` triplets with InfoNCE contrastive loss:
 
+Jonav's completed Colab run selected LR `3e-5`, temperature `0.05`, batch 64 and 3 epochs using dev only: **81.67 Dev / 79.02 Test**. Hard-negative ablation improved test by **1.91 points**. See [the supervised report](reports/JONAV_RESULTADOS.md), [results CSV](reports/jonav/supervised_benchmark.csv), and [portable Colab notebook](notebooks/jonav_simcse_supervisado.ipynb). The notebook uses `requirements-colab.txt` and saves checkpoints in Drive. Training now evaluates dev by default; `--eval_test` explicitly enables final test scoring. Development-only logs have `test: null`.
+
+Supervised checkpoints retain the trained MLP for inference and are loaded with `SimCSEModel.from_checkpoint`. Their weights remain in Drive, outside Git. The existing Hub exporter needs adaptation before publishing these supervised checkpoints; publishing the already-exported unsupervised model remains a separate workflow.
+
 ```bash
 python scripts/train_supervised.py \
   --data_path data/snli_train_100k.jsonl \

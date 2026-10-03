@@ -1,0 +1,16 @@
+{
+  "selected_using": "dev_only",
+  "best_run": "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed42",
+  "lr": 3e-05,
+  "temperature": 0.05,
+  "batch_size": 64,
+  "epochs": 3,
+  "trial_runs": [
+    "jonav_sup_hnon_lr3e-05_tau0.03_bs64_ep3_seed42",
+    "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed42",
+    "jonav_sup_hnon_lr3e-05_tau0.1_bs64_ep3_seed42",
+    "jonav_sup_hnon_lr5e-05_tau0.03_bs64_ep3_seed42",
+    "jonav_sup_hnon_lr5e-05_tau0.05_bs64_ep3_seed42",
+    "jonav_sup_hnon_lr5e-05_tau0.1_bs64_ep3_seed42"
+  ]
+}

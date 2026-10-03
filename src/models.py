@@ -2,6 +2,8 @@
 Supports contrastive InfoNCE loss, MLP projection layer, and flexible pooling strategies.
 """
 
+import json
+import os
 from typing import Dict, Optional, Tuple, Union
 import torch
 import torch.nn as nn
@@ -11,8 +13,7 @@ from transformers import AutoModel, AutoConfig, PreTrainedModel
 
 class MLPLayer(nn.Module):
     """Projection MLP head for SimCSE training (linear + tanh).
-    Paper observation: Using an MLP head during training and discarding it during test
-    improves sentence representations.
+    Unsupervised inference discards this head; supervised CLS inference keeps it.
     """
 
     def __init__(self, hidden_size: int):
@@ -34,6 +35,8 @@ class SimCSEModel(nn.Module):
         temperature: float = 0.05,
         use_mlp: bool = True,
         dropout_rate: Optional[float] = None,
+        inference_mlp: bool = False,
+        config_only: bool = False,
     ):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name_or_path)
@@ -41,11 +44,32 @@ class SimCSEModel(nn.Module):
             self.config.hidden_dropout_prob = dropout_rate
             self.config.attention_probs_dropout_prob = dropout_rate
 
-        self.encoder = AutoModel.from_pretrained(model_name_or_path, config=self.config)
+        self.encoder = (AutoModel.from_config(self.config) if config_only
+                        else AutoModel.from_pretrained(model_name_or_path, config=self.config))
         self.pooling = pooling
         self.temperature = temperature
         self.use_mlp = use_mlp
+        self.inference_mlp = inference_mlp
         self.mlp = MLPLayer(self.config.hidden_size) if use_mlp else nn.Identity()
+
+    def save_checkpoint(self, directory, tokenizer):
+        """Save encoder configuration and the complete SimCSE state together."""
+        os.makedirs(directory, exist_ok=True)
+        self.config.save_pretrained(directory)
+        tokenizer.save_pretrained(directory)
+        torch.save(self.state_dict(), os.path.join(directory, "pytorch_model.bin"))
+        with open(os.path.join(directory, "simcse_config.json"), "w", encoding="utf-8") as f:
+            json.dump({"pooling": self.pooling, "temperature": self.temperature,
+                       "use_mlp": self.use_mlp, "inference_mlp": self.inference_mlp}, f, indent=2)
+
+    @classmethod
+    def from_checkpoint(cls, directory, device="cpu"):
+        with open(os.path.join(directory, "simcse_config.json"), encoding="utf-8") as f:
+            settings = json.load(f)
+        model = cls(directory, config_only=True, **settings)
+        state = torch.load(os.path.join(directory, "pytorch_model.bin"), map_location="cpu", weights_only=True)
+        model.load_state_dict(state)
+        return model.to(device).eval()
 
     def encode(
         self,
@@ -147,7 +171,7 @@ class SimCSEModel(nn.Module):
             )
             z_negative = F.normalize(z_negative, p=2, dim=-1)
 
-            # Similarity against all positives and all hard negatives: shape (B, 2B)
+            # B positives and K available contradiction negatives: shape (B, B + K).
             sim_pos = torch.matmul(z_premise, z_positive.T) / self.temperature
             sim_neg = torch.matmul(z_premise, z_negative.T) / self.temperature
             sim_matrix = torch.cat([sim_pos, sim_neg], dim=1)
@@ -168,9 +192,9 @@ class SimCSEModel(nn.Module):
         token_type_ids: Optional[torch.Tensor] = None,
         normalize: bool = True,
     ) -> torch.Tensor:
-        """Inference mode sentence embedding extraction (without MLP head as recommended)."""
+        """Use the saved inference recipe; supervised CLS keeps its trained MLP."""
         self.eval()
-        rep = self.encode(input_ids, attention_mask, token_type_ids, apply_mlp=False)
+        rep = self.encode(input_ids, attention_mask, token_type_ids, apply_mlp=self.inference_mlp)
         if normalize:
             rep = F.normalize(rep, p=2, dim=-1)
         return rep

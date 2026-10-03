@@ -1,0 +1,39 @@
+{
+  "run_name": "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed456",
+  "timestamp": "20261002_230240",
+  "mode": "sup",
+  "model_name_or_path": "bert-base-uncased",
+  "pooling": "cls",
+  "hyperparameters": {
+    "lr": 3e-05,
+    "batch_size": 64,
+    "epochs": 3,
+    "temperature": 0.05,
+    "dropout_rate": null,
+    "weight_decay": 0.0,
+    "warmup_ratio": 0.05,
+    "seed": 456,
+    "same_dropout_mask_ablation": false,
+    "no_hard_negatives_ablation": false,
+    "max_length": 64,
+    "inference_mlp": true
+  },
+  "hardware": {
+    "os": "Linux-6.6.122+-x86_64-with-glibc2.39",
+    "python_version": "3.13.15",
+    "device": "cuda",
+    "gpu_name": "Tesla T4",
+    "gpu_count": 1,
+    "cuda_version": "13.0"
+  },
+  "training_time_seconds": 1214.54,
+  "results": {
+    "dev": {
+      "spearman": 82.15,
+      "alignment": 0.1903,
+      "uniformity": -3.1335
+    },
+    "test": null
+  },
+  "checkpoint_path": "/content/drive/MyDrive/SimCSE_jonav/checkpoints/jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed456/best_checkpoint"
+}

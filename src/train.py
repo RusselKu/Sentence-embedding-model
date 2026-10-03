@@ -61,6 +61,7 @@ def evaluate_on_stsb(
     records: list,
     device: str,
     batch_size: int = 64,
+    max_length: int = 64,
 ) -> Dict[str, float]:
     """Evaluate model on STS-B records (dev or test split)."""
     model.eval()
@@ -72,7 +73,7 @@ def evaluate_on_stsb(
         all_emb = []
         for i in range(0, len(sentences), batch_size):
             batch = sentences[i : i + batch_size]
-            inputs = tokenizer(batch, padding=True, truncation=True, max_length=64, return_tensors="pt").to(device)
+            inputs = tokenizer(batch, padding=True, truncation=True, max_length=max_length, return_tensors="pt").to(device)
             with torch.no_grad():
                 emb = model.get_sentence_embeddings(inputs["input_ids"], inputs["attention_mask"], normalize=True)
             all_emb.append(emb.cpu().numpy())
@@ -93,7 +94,8 @@ def train(args):
     run_name = args.run_name or f"{args.mode}_{args.pooling}_{run_timestamp}"
     output_dir = os.path.join(args.output_dir, run_name)
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs("runs", exist_ok=True)
+    runs_dir = getattr(args, "runs_dir", "runs")
+    os.makedirs(runs_dir, exist_ok=True)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
     model = SimCSEModel(
@@ -102,6 +104,7 @@ def train(args):
         temperature=args.temperature,
         use_mlp=True,
         dropout_rate=args.dropout_rate,
+        inference_mlp=(args.mode == "sup" and args.pooling == "cls"),
     ).to(device)
 
     # Load STS-B for validation
@@ -123,6 +126,12 @@ def train(args):
         collator = SupDataCollator(tokenizer, max_length=args.max_length, use_hard_negatives=not args.no_hard_negatives)
 
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collator, drop_last=True)
+    if not len(dataloader):
+        raise ValueError("Dataset must contain at least one full training batch.")
+    eval_batch_size = getattr(args, "eval_batch_size", 64)
+    def evaluate(records):
+        return evaluate_on_stsb(model, tokenizer, records, device,
+                                batch_size=eval_batch_size, max_length=args.max_length)
 
     # Optimizer and Scheduler
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -178,37 +187,34 @@ def train(args):
             # Intermediate dev evaluation if requested
             global_step = (epoch - 1) * len(dataloader) + step + 1
             if args.eval_steps > 0 and global_step % args.eval_steps == 0:
-                dev_res = evaluate_on_stsb(model, tokenizer, dev_records, device)
+                dev_res = evaluate(dev_records)
                 print(f"\n[Step {global_step}] Dev Spearman: {dev_res['spearman']:.2f} (Best: {best_dev_spearman:.2f})")
                 if dev_res["spearman"] > best_dev_spearman:
                     best_dev_spearman = dev_res["spearman"]
-                    os.makedirs(best_checkpoint_path, exist_ok=True)
-                    torch.save(model.state_dict(), os.path.join(best_checkpoint_path, "pytorch_model.bin"))
-                    tokenizer.save_pretrained(best_checkpoint_path)
+                    model.save_checkpoint(best_checkpoint_path, tokenizer)
                 model.train()
 
         # End of epoch evaluation
-        dev_res = evaluate_on_stsb(model, tokenizer, dev_records, device)
+        dev_res = evaluate(dev_records)
         avg_loss = epoch_loss / len(dataloader)
         print(f"\n[Epoch {epoch} Done] Avg Loss: {avg_loss:.4f} | Dev Spearman: {dev_res['spearman']:.2f}")
 
         if dev_res["spearman"] > best_dev_spearman:
             best_dev_spearman = dev_res["spearman"]
-            os.makedirs(best_checkpoint_path, exist_ok=True)
-            torch.save(model.state_dict(), os.path.join(best_checkpoint_path, "pytorch_model.bin"))
-            tokenizer.save_pretrained(best_checkpoint_path)
+            model.save_checkpoint(best_checkpoint_path, tokenizer)
 
     elapsed_time = time.time() - start_time
     print(f"\nTraining completed in {elapsed_time/60:.2f} minutes.")
 
     # Load best checkpoint for final evaluation
     print("\n--- Final Evaluation on Best Checkpoint ---")
-    model.load_state_dict(torch.load(os.path.join(best_checkpoint_path, "pytorch_model.bin"), map_location=device))
-    dev_final = evaluate_on_stsb(model, tokenizer, dev_records, device)
-    test_final = evaluate_on_stsb(model, tokenizer, test_records, device)
+    model.load_state_dict(torch.load(os.path.join(best_checkpoint_path, "pytorch_model.bin"), map_location=device, weights_only=True))
+    dev_final = evaluate(dev_records)
+    test_final = evaluate(test_records) if getattr(args, "eval_test", False) else None
 
     print(f"Final Best Dev  -> Spearman: {dev_final['spearman']:.2f} | Alignment: {dev_final['alignment']:.4f} | Uniformity: {dev_final['uniformity']:.4f}")
-    print(f"Final Best Test -> Spearman: {test_final['spearman']:.2f} | Alignment: {test_final['alignment']:.4f} | Uniformity: {test_final['uniformity']:.4f}")
+    if test_final is not None:
+        print(f"Final Best Test -> Spearman: {test_final['spearman']:.2f} | Alignment: {test_final['alignment']:.4f} | Uniformity: {test_final['uniformity']:.4f}")
 
     # Build Run Metadata
     run_metadata = {
@@ -228,6 +234,8 @@ def train(args):
             "seed": args.seed,
             "same_dropout_mask_ablation": args.same_dropout_mask,
             "no_hard_negatives_ablation": args.no_hard_negatives,
+            "max_length": args.max_length,
+            "inference_mlp": model.inference_mlp,
         },
         "hardware": get_hardware_info(),
         "training_time_seconds": round(elapsed_time, 2),
@@ -239,13 +247,13 @@ def train(args):
     }
 
     # Save run json
-    run_file = os.path.join("runs", f"{run_name}.json")
+    run_file = os.path.join(runs_dir, f"{run_name}.json")
     with open(run_file, "w", encoding="utf-8") as f:
         json.dump(run_metadata, f, indent=2)
     print(f"Saved run metadata to: {run_file}")
 
     # Append to run history
-    history_file = os.path.join("runs", "run_history.json")
+    history_file = os.path.join(runs_dir, "run_history.json")
     history = []
     if os.path.exists(history_file):
         try:
@@ -278,6 +286,9 @@ if __name__ == "__main__":
     parser.add_argument("--max_length", type=int, default=64, help="Max sequence length")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--eval_steps", type=int, default=250, help="Evaluate dev set every N steps (0 to disable)")
+    parser.add_argument("--runs_dir", default="runs")
+    parser.add_argument("--eval_batch_size", type=int, default=64)
+    parser.add_argument("--eval_test", action="store_true", help="Only for a finalized run, never for hyperparameter search")
 
     # Ablation Flags
     parser.add_argument("--same_dropout_mask", action="store_true", help="Ablation: use identical dropout mask (unsup)")

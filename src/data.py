@@ -302,12 +302,9 @@ class SupDataCollator:
 
         if has_negatives:
             negatives = [
-                (
-                    item["negative"]
-                    if item["negative"] is not None
-                    else item["positive"]
-                )
+                item["negative"]
                 for item in batch
+                if item["negative"] is not None
             ]
 
             tokenized_negatives = self.tokenizer(

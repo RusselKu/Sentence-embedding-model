@@ -16,7 +16,7 @@
 - **Denominator ($\sum_{j=1}^N \exp(\text{sim}(h_i, h_j^+) / \tau)$):** Sums the exponentiated similarities between anchor $h_i$ and all $N$ representations in the mini-batch (including the 1 positive pair and $N-1$ in-batch negative pairs).
 - **Number of Negatives Pushed Away:**
   - In **Unsupervised SimCSE** with mini-batch size $N = 64$: each anchor is pushed away from **$N - 1 = 63$ in-batch negatives**.
-  - In **Supervised SimCSE with Hard Negatives** (batch size $N = 64$ pairs + hard negatives): each anchor is pushed away from $(N - 1)$ in-batch positive views $+ N$ contradiction negatives = **$2N - 1 = 127$ negatives** per optimization step.
+  - In **Supervised SimCSE with Hard Negatives** (batch size $N = 64$ pairs): each anchor has $(N - 1) + K$ negatives, where $K$ is the number of real contradictions available in that batch. This equals 127 only when all 64 pairs have contradictions. In our subset, only 28.45% of pairs have one; missing contradictions are not replaced by positive hypotheses.
 
 ### 2. Temperature Parameter ($\tau$)
 - **Function:** Temperature $\tau$ controls the "softness" vs. "hardness" of the probability distribution over negatives. Smaller $\tau$ sharpens the softmax, heavily penalizing negatives that are deceptively close in cosine distance (hard negatives).
@@ -38,9 +38,11 @@
 | Run ID | Mode | Backbone | Batch Size | LR | Epochs | $\tau$ | Pooling | Dev Spearman | Test Spearman |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `unsup_simcse_default` | Unsup | `bert-base-uncased` | 64 | 3e-5 | 1 | 0.05 | CLS | **76.32** | **67.32** |
-| `sup_simcse_default` | Sup (Hard Negs) | `bert-base-uncased` | 64 | 5e-5 | 3 | 0.05 | CLS | *[Dev]* | *[Test]* |
+| `jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed42` | Sup (Hard Negs) | `bert-base-uncased` | 64 | 3e-5 | 3 | 0.05 | CLS + MLP | **81.67** | **79.02** |
 | `ablation_unsup_same_mask` | Unsup (Ablation) | `bert-base-uncased` | 64 | 3e-5 | 1 | 0.05 | CLS | **55.39** | **47.78** |
-| `ablation_sup_no_hard_neg` | Sup (Ablation) | `bert-base-uncased` | 64 | 5e-5 | 3 | 0.05 | CLS | *[Dev]* | *[Test]* |
+| `jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed42` | Sup (Ablation) | `bert-base-uncased` | 64 | 3e-5 | 3 | 0.05 | CLS + MLP | **81.01** | **77.11** |
+
+The supervised learning rate and temperature were chosen from six runs using only STS-B dev. The two final seed-42 checkpoints were locked before test evaluation. Additional seeds estimate dev variability and do not replace the selected final pair. See [Jonav's report and complete sweep](JONAV_RESULTADOS.md).
 
 ---
 
@@ -53,7 +55,9 @@
 
 ### Ablation 2 (Supervised): Hard Negatives ON vs. OFF
 - **Hypothesis:** Contradiction pairs force the model to distinguish fine-grained semantic opposites that share substantial lexical overlap (e.g., "A dog running" vs. "A dog sleeping").
-- **Delta Observed:** $\Delta \text{Dev} = \dots$, $\Delta \text{Test} = \dots$.
+- **Delta Observed (ON − OFF, seed 42):** $\Delta \text{Dev} = +0.66$, $\Delta \text{Test} = +1.91$ points.
+- **Dev variability:** Paired deltas for seeds 42, 123, 456 are +0.66, +0.83, +0.11. Their mean is +0.53 and sample standard deviation is 0.38. ON/OFF dev sample deviations are 0.25/0.54. All three deltas are positive, but three seeds provide descriptive evidence rather than statistical significance. There are no extra test evaluations for seeds 123 and 456.
+- **Geometry:** ON improves uniformity on dev and test. Alignment is slightly worse on dev (0.1857 vs. 0.1799) and slightly better on test (0.1903 vs. 0.1914); the gain does not improve every metric consistently. Contradictions plausibly help distinguish semantically incompatible sentences, but retrieval cases are still needed to assess this explanation.
 
 ---
 
@@ -65,15 +69,20 @@
 | **Raw `bert-base-uncased` (mean pooling)** | 59.31 | 47.29 | 0.3678 / 0.3044 | -1.6348 / -1.6186 |
 | **SBERT-2019 (`bert-base-nli-mean-tokens`)** | 80.77 | 76.98 | 0.6996 / 0.5498 | -3.0557 / -3.0493 |
 | **Our Unsupervised SimCSE** | **76.32** | **67.32** | 0.6829 / 0.6090 | -2.8887 / -2.8900 |
-| **Our Supervised SimCSE** | *[Our Dev]* | *[Our Test]* | *[Align]* | *[Uniform]* |
+| **Our Supervised SimCSE** | **81.67** | **79.02** | 0.1857 / 0.1903 | -3.1374 / -3.0460 |
 | **SimCSE Paper Unsupervised (Gao et al. 2021)** | 82.50 | 76.85 | - | - |
-| **SimCSE Paper Supervised (Gao et al. 2021)** | 84.92 | 81.57 | - | - |
+| **SimCSE Paper Supervised BERT-base (Gao et al. 2021)** | 86.20 | 84.25 | - | - |
+
+Paper references use STS-B specifically: supervised dev 86.2 is from Table 4 and test 84.25 from Table 5. The value 81.57 is the average of seven STS tasks, not STS-B test. Our supervised gaps are **4.53 dev / 5.23 test** points. See the [original paper](https://aclanthology.org/2021.emnlp-main.552.pdf).
 
 ### Accounting for the Gap (Critical Analysis)
-*The discrepancy between our empirical numbers and the published SimCSE paper figures stems from key systematic differences:*
-1. **Training Data Size & Composition:** The original paper trained on 1,000,000 sentences from English Wikipedia for the unsupervised model, and 275,601 premise-hypothesis-contradiction triplets from combined MNLI + SNLI for the supervised model. Our training was conducted strictly on a 100k sampled subset of SNLI (`snli_train_100k.jsonl`, yielding 165k unique sentences and 33k entailment pairs).
-2. **Batch Size & Negative Quantity:** The paper utilized large mini-batches ($N=512$ or $N=256$), exposing each anchor to hundreds of in-batch negative pairs per step, directly improving uniformity on the hypersphere. Our hardware-constrained batch size of 64 provides fewer negatives per batch.
-3. **Hard Negative Availability:** In our 100k subset, only ~28% of entailment pairs have a matching contradiction hypothesis, whereas the paper leveraged dense paired contradictions across all samples.
+*These protocol differences may contribute to the gap; our experiments do not isolate their effects:*
+
+1. **Training data:** The paper uses one million Wikipedia sentences for unsupervised training and approximately 314k SNLI+MNLI positive pairs for supervised training. Our SNLI subset yields 165,529 unique sentences and 33,351 entailment pairs.
+2. **Batch and tuning:** Appendix A uses batch 64 for unsupervised BERT-base and 512 for supervised BERT-base. Our batch is 64 for both. The paper notes that batch sensitivity depends on learning-rate tuning, so a smaller batch alone does not establish the cause of the gap.
+3. **Hard negatives:** Only 9,488 of our 33,351 entailment pairs (28.45%) have a matched contradiction. This changes the coverage and number of available hard negatives relative to the full NLI setup.
+
+Our supervised model exceeds the team's recorded SBERT-2019 test baseline by **2.04 points** and raw BERT by **31.73 points**. These are comparisons with existing baseline logs, not newly rerun baselines. Supervised interpretation and reproducibility evidence are documented in [JONAV_RESULTADOS.md](JONAV_RESULTADOS.md).
 
 ---
 
