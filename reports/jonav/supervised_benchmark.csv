@@ -1,0 +1,5 @@
+hard_negatives,split,seed,spearman,alignment,uniformity
+on,dev,42,81.67,0.1857,-3.1374
+on,test,42,79.02,0.1903,-3.046
+off,dev,42,81.01,0.1799,-3.0665
+off,test,42,77.11,0.1914,-2.9656

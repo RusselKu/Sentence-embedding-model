@@ -98,6 +98,7 @@ def run_evaluation(
     pooling: str = "cls",
     device: Optional[str] = None,
     output_json: Optional[str] = None,
+    split: str = "both",
 ) -> Dict:
     """Run full STS-B evaluation across dev and test splits."""
     if device is None:
@@ -105,32 +106,37 @@ def run_evaluation(
 
     print(f"\n--- Loading STS-B Dataset ---")
     dev_records, test_records = load_stsb_dataset()
+    if split not in {"dev", "test", "both"}:
+        raise ValueError("split must be dev, test or both")
     print(f"Loaded {len(dev_records)} dev pairs and {len(test_records)} test pairs.")
 
     print(f"Evaluating Model: {model_path_or_name} (Type: {model_type}, Pooling: {pooling}, Device: {device})")
 
     if model_type == "sbert":
         st_model = SentenceTransformer(model_path_or_name, device=device)
-        dev_res = evaluate_split(dev_records, st_model, is_st=True)
-        test_res = evaluate_split(test_records, st_model, is_st=True)
+        dev_res = evaluate_split(dev_records, st_model, is_st=True) if split != "test" else None
+        test_res = evaluate_split(test_records, st_model, is_st=True) if split != "dev" else None
     elif model_type == "raw_bert":
         tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
         model = AutoModel.from_pretrained(model_path_or_name).to(device)
-        dev_res = evaluate_split(dev_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling)
-        test_res = evaluate_split(test_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling)
+        dev_res = evaluate_split(dev_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling) if split != "test" else None
+        test_res = evaluate_split(test_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling) if split != "dev" else None
     elif model_type == "st_hub":
         st_model = SentenceTransformer(model_path_or_name, device=device)
-        dev_res = evaluate_split(dev_records, st_model, is_st=True)
-        test_res = evaluate_split(test_records, st_model, is_st=True)
+        dev_res = evaluate_split(dev_records, st_model, is_st=True) if split != "test" else None
+        test_res = evaluate_split(test_records, st_model, is_st=True) if split != "dev" else None
     else:  # simcse checkpoint or dir
         tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
-        model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
-        # If checkpoint has state_dict
-        ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
-        if os.path.exists(ckpt_file):
-            model.load_state_dict(torch.load(ckpt_file, map_location=device))
-        dev_res = evaluate_split(dev_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling)
-        test_res = evaluate_split(test_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling)
+        if os.path.exists(os.path.join(model_path_or_name, "simcse_config.json")):
+            model = SimCSEModel.from_checkpoint(model_path_or_name, device=device)
+        else:
+            model = SimCSEModel(model_path_or_name, pooling=pooling).to(device)
+            # Backward compatibility for checkpoints predating saved settings.
+            ckpt_file = os.path.join(model_path_or_name, "pytorch_model.bin")
+            if os.path.exists(ckpt_file):
+                model.load_state_dict(torch.load(ckpt_file, map_location=device, weights_only=True))
+        dev_res = evaluate_split(dev_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling) if split != "test" else None
+        test_res = evaluate_split(test_records, model, is_st=False, tokenizer=tokenizer, device=device, pooling=pooling) if split != "dev" else None
 
     results = {
         "model": model_path_or_name,
@@ -144,8 +150,9 @@ def run_evaluation(
     print("\n" + "=" * 50)
     print(f"EVALUATION RESULTS FOR {model_path_or_name}")
     print("=" * 50)
-    print(f"Dev  Spearman (x100): {dev_res['spearman']:.2f} | Alignment: {dev_res['alignment']:.4f} | Uniformity: {dev_res['uniformity']:.4f}")
-    print(f"Test Spearman (x100): {test_res['spearman']:.2f} | Alignment: {test_res['alignment']:.4f} | Uniformity: {test_res['uniformity']:.4f}")
+    for label, metrics in [("Dev", dev_res), ("Test", test_res)]:
+        if metrics is not None:
+            print(f"{label} Spearman (x100): {metrics['spearman']:.2f} | Alignment: {metrics['alignment']:.4f} | Uniformity: {metrics['uniformity']:.4f}")
     print("=" * 50 + "\n")
 
     if output_json:
@@ -163,6 +170,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_type", type=str, choices=["simcse", "raw_bert", "sbert", "st_hub"], default="raw_bert")
     parser.add_argument("--pooling", type=str, choices=["cls", "mean"], default="mean")
     parser.add_argument("--output_json", type=str, default=None, help="Path to save evaluation output JSON")
+    parser.add_argument("--split", choices=["dev", "test", "both"], default="both")
     args = parser.parse_args()
 
     run_evaluation(
@@ -170,4 +178,5 @@ if __name__ == "__main__":
         model_type=args.model_type,
         pooling=args.pooling,
         output_json=args.output_json,
+        split=args.split,
     )

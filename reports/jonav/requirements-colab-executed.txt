@@ -1,0 +1,14 @@
+# Python 3.12 / 3.13. Keep Colab's CUDA torch.
+transformers==4.48.3
+tokenizers==0.21.4
+sentence-transformers==3.4.1
+datasets==4.3.0
+scipy==1.15.3
+numpy==2.2.6
+scikit-learn==1.6.1
+tqdm==4.67.1
+matplotlib==3.10.1
+seaborn==0.13.2
+pandas==2.2.3
+huggingface_hub==0.36.0
+accelerate==1.10.1

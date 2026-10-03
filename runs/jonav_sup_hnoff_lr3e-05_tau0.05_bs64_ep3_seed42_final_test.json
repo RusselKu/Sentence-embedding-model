@@ -1,0 +1,12 @@
+{
+  "model": "/content/drive/MyDrive/SimCSE_jonav/checkpoints/jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed42/best_checkpoint",
+  "model_type": "simcse",
+  "pooling": "cls",
+  "device": "cuda",
+  "dev": null,
+  "test": {
+    "spearman": 77.11,
+    "alignment": 0.1914,
+    "uniformity": -2.9656
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "on_dev_std": 0.25324559884296843,
+  "off_dev_std": 0.5442732157045167,
+  "paired_delta_dev_mean": 0.5333333333333314,
+  "paired_delta_dev_std": 0.3763420430052064,
+  "pairs": [
+    {
+      "seed": 42,
+      "on": "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed42",
+      "off": "jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed42",
+      "delta_dev_on_minus_off": 0.6599999999999966
+    },
+    {
+      "seed": 123,
+      "on": "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed123",
+      "off": "jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed123",
+      "delta_dev_on_minus_off": 0.8299999999999983
+    },
+    {
+      "seed": 456,
+      "on": "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed456",
+      "off": "jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed456",
+      "delta_dev_on_minus_off": 0.10999999999999943
+    }
+  ]
+}

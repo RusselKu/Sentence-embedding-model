@@ -93,9 +93,9 @@
 - [x] **Data Pipeline:** SNLI 100k parsed for both Unsupervised (unique sentences) and Supervised (entailment + hard negatives).
 - [x] **Baselines Verified:** Raw BERT ($59.31 / 47.29$) and SBERT-2019 ($80.77 / 76.98$) sanity check passed.
 - [x] **Trained Models (Unsupervised Lead):** Unsupervised SimCSE trained (Dev: $76.32$, Test: $67.32$) with best checkpoints saved.
-- [ ] **Trained Models (Supervised Lead):** Supervised SimCSE model training (Joni).
+- [x] **Trained Models (Supervised Lead):** Jonav's six-run dev sweep selected LR 3e-5, temperature 0.05, batch 64, 3 epochs, seed 42; Dev 81.67 / Test 79.02. Checkpoint saved in Drive. See [results](reports/JONAV_RESULTADOS.md).
 - [x] **Ablations Executed (Unsupervised):** Independent dropout mask vs. Same dropout mask ($\Delta = +19.54$ Test points).
-- [ ] **Ablations Executed (Supervised):** Hard negatives ON vs. OFF (Joni).
+- [x] **Ablations Executed (Supervised):** Hard negatives ON vs. OFF: +0.66 Dev / +1.91 Test (seed 42); three paired seeds give mean dev delta +0.53, sample standard deviation 0.38.
 - [x] **Hugging Face Hub Model:** Published [RusselKuAguilar/simcse-bert-uncased-unsup](https://huggingface.co/RusselKuAguilar/simcse-bert-uncased-unsup) with rich Model Card, verified by reloading and re-evaluating on STS-B Test ($67.32$, $\Delta = 0.00$).
-- [x] **Run Logs:** `runs/unsup_simcse_default.json` and `runs/ablation_unsup_same_mask.json` generated and tracked.
+- [x] **Run Logs:** Two existing unsupervised records plus 11 supervised runs integrated in `runs/run_history.json`; individual supervised logs are in `runs/jonav_*.json`. Test remains null for development-only trials.
 - [ ] **Final Report:** Complete PDF/Markdown covering Part 1–8 with team names (Bianca/Team).

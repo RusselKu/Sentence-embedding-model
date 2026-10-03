@@ -1,0 +1,27 @@
+{
+  "base_commit": "5a07e44b55b013b33d85b424e5c04af469d0f2ff",
+  "branch": "jonav",
+  "local_changes_included": true,
+  "files_sha256": {
+    "requirements-colab.txt": "a045f5b14629dd9dc8f8389855e835b60c318c16a68f6e035496751e59a297ff",
+    "scripts/generate_colab_notebook.py": "4d79485917a869faf6ff9fc627644c3f4913a94e0ee4b2820a8e0568ce7184cd",
+    "scripts/generate_notebook.py": "4003ce96fb9639b3396945a13faeb2f5eb4149719df9b6bcb146b6cfeae63694",
+    "scripts/run_ablations.py": "db42b2644e80ac0921d30e9a6835e543ab700425dc89d4cbd53d92c5c1183008",
+    "scripts/run_sanity_checks.py": "8190f4c8de8dd973b8ec4785b8c4496649bd2f34bb1e7dc90ec788ba006ffb03",
+    "scripts/train_supervised.py": "75a172e1c9dae3115ab18ade77a1f91fee7ab39521f471965e1a74c2b6a666a4",
+    "scripts/train_unsupervised.py": "6c97ee3b024a8d3e489f30f4513a64cff58c8a1f3a7000c68297567e2fdf9330",
+    "scripts/validate_dataset.py": "e726049e4048a7f79ce43ed4c543bc8815faeab7dcfd788e3a545219b93ad261",
+    "scripts/validate_run_history.py": "6b8f610972138fb328a7971f7672d910f25cafcd7d63f826aed9640ddf3b345a",
+    "snli_train_100k.jsonl": "34ee3d44ac12460b8c931b134642bf10d260a7587e6785c4e8856af895762329",
+    "src/__init__.py": "cf7d972ab6c2becbd7e2d2505627790e9f42d7fd5855de7d37f37eb4ae5284ce",
+    "src/analysis.py": "abcf0a0fe3e1ea55473d478a2bd41ed4077f7e87c1483d6d8851b378c13763c3",
+    "src/data.py": "ed8561de5da6ecf2a0386fc786d45d5eb0976f4a3a030d5870ed3d777a4d807c",
+    "src/evaluate.py": "63ad21a853ee384292c08025cb71f680beeae706ae61bcbd41acefb2159bb275",
+    "src/metrics.py": "6089d208cce34f6ac644e9fdc864c69dd550b72ef5fb7df3a2a81a1defd81d74",
+    "src/models.py": "9e645841380bf5e3aff7a4bcaff60059c50c83ed88422d34c1c4edf092eb17a3",
+    "src/publish.py": "7b4e6a2d3ac121db7d5735270ab15d340ae8b315f10387b9a36c212c90c349e4",
+    "src/train.py": "26f963e2b1007e480bd9c157e56336735122d720d03a2b5e248ed0d848ac5039",
+    "tests/test_supervised_pipeline.py": "d6f3b0c0abf39ef1a6e9a7063be12d2e71e4d39c6faf39d581387682d585e2aa"
+  },
+  "python313_dependency_fix": true
+}

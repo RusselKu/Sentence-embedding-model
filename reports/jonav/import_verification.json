@@ -1,0 +1,40 @@
+{
+  "archive_sha256": "584a9a68cc142290c98f92e15ba72ea53d4f3ff50e130fd53076f686db09c851",
+  "archive_files": 22,
+  "supervised_runs": 11,
+  "merged_training_runs": 13,
+  "final_test_runs": [
+    "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed42",
+    "jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed42"
+  ],
+  "verified": [
+    "zip_crc",
+    "individual_logs_equal_history",
+    "selection_uses_dev_only",
+    "paired_configs_differ_only_in_hard_negatives",
+    "csv_matches_run_logs",
+    "final_test_matches_saved_evaluation",
+    "seed_mean_and_sample_std"
+  ],
+  "source_files_matching_manifest": [
+    "scripts/generate_colab_notebook.py",
+    "scripts/generate_notebook.py",
+    "scripts/run_ablations.py",
+    "scripts/run_sanity_checks.py",
+    "scripts/train_supervised.py",
+    "scripts/train_unsupervised.py",
+    "scripts/validate_dataset.py",
+    "scripts/validate_run_history.py",
+    "snli_train_100k.jsonl",
+    "src/__init__.py",
+    "src/analysis.py",
+    "src/data.py",
+    "src/evaluate.py",
+    "src/metrics.py",
+    "src/models.py",
+    "src/publish.py",
+    "src/train.py",
+    "tests/test_supervised_pipeline.py"
+  ],
+  "requirements_note": "Executed and local dependency pins match; only the comment differs. Exact executed file reconstructed and hash verified."
+}

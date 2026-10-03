@@ -1,0 +1,4 @@
+{
+  "on": "jonav_sup_hnon_lr3e-05_tau0.05_bs64_ep3_seed42",
+  "off": "jonav_sup_hnoff_lr3e-05_tau0.05_bs64_ep3_seed42"
+}
